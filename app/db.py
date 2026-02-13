@@ -39,6 +39,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
             volunteer_id INTEGER NOT NULL,
             shift_id INTEGER NOT NULL,
             signed_up_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            dropped_at TIMESTAMP,
             FOREIGN KEY (volunteer_id) REFERENCES volunteers(id),
             FOREIGN KEY (shift_id) REFERENCES shifts(id),
             UNIQUE(volunteer_id, shift_id)
