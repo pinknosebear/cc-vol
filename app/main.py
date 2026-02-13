@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import get_db_connection, create_tables
+from app.routes.coordinator import router as coordinator_router
 from app.routes.shifts import router as shifts_router
 from app.routes.signups import router as signups_router
 from app.routes.volunteers import router as volunteers_router
@@ -15,6 +16,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(coordinator_router)
 app.include_router(shifts_router)
 app.include_router(signups_router)
 app.include_router(volunteers_router)
