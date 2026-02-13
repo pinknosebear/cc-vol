@@ -23,6 +23,7 @@ client = TestClient(app)
 
 def _reset_db():
     """Clear all data between tests."""
+    app.state.db = test_conn
     test_conn.execute("DELETE FROM signups")
     test_conn.execute("DELETE FROM shifts")
     test_conn.execute("DELETE FROM volunteers")
