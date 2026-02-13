@@ -32,6 +32,11 @@ def get_db(request: Request):
     return request.app.state.db
 
 
+from app.routes.signups import router as signups_router
+
+app.include_router(signups_router)
+
+
 @app.get("/healthz")
 def healthz():
     return {"status": "ok"}
