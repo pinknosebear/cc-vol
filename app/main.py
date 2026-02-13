@@ -2,8 +2,10 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import get_db_connection, create_tables
+from app.routes.signups import router as signups_router
 
 app = FastAPI(title="cc-vol", description="Volunteer Scheduling System")
+app.include_router(signups_router)
 
 app.add_middleware(
     CORSMiddleware,
