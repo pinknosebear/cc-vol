@@ -6,6 +6,7 @@ from app.routes.coordinator import router as coordinator_router
 from app.routes.shifts import router as shifts_router
 from app.routes.signups import router as signups_router
 from app.routes.volunteers import router as volunteers_router
+from app.routes.wa_incoming import router as wa_incoming_router
 
 app = FastAPI(title="cc-vol", description="Volunteer Scheduling System")
 
@@ -20,6 +21,7 @@ app.include_router(coordinator_router)
 app.include_router(shifts_router)
 app.include_router(signups_router)
 app.include_router(volunteers_router)
+app.include_router(wa_incoming_router)
 
 DB_PATH = "cc-vol.db"
 
