@@ -21,6 +21,7 @@ client = TestClient(app)
 
 def _reset_db():
     """Clear all data between tests."""
+    app.state.db = test_conn
     test_conn.executescript(
         """
         DELETE FROM signups;
