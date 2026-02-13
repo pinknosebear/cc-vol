@@ -1,4 +1,4 @@
-"""Seed monthly shift data into the database."""
+"""Seed helpers: monthly shifts and dummy volunteer profiles."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import sqlite3
 from datetime import date
 
 from app.models.shift import ShiftCreate, create_shift, get_robe_capacity
+from app.models.volunteer import Volunteer, VolunteerCreate, create_volunteer, get_volunteer_by_phone
 
 
 def seed_month(db: sqlite3.Connection, year: int, month: int) -> int:
@@ -37,3 +38,45 @@ def seed_month(db: sqlite3.Connection, year: int, month: int) -> int:
             created += 1
 
     return created
+
+
+# ---------------------------------------------------------------------------
+# Volunteer seed data
+# ---------------------------------------------------------------------------
+
+VOLUNTEER_DATA = [
+    {"phone": "1111111111", "name": "Sonia", "is_coordinator": True},
+    {"phone": "2222222222", "name": "Raghu", "is_coordinator": True},
+    {"phone": "3333333333", "name": "Ganesh", "is_coordinator": False},
+    {"phone": "4444444444", "name": "Anita", "is_coordinator": False},
+    {"phone": "5555555555", "name": "Bhawna", "is_coordinator": False},
+    {"phone": "6666666666", "name": "Seema", "is_coordinator": False},
+    {"phone": "7777777777", "name": "Mili", "is_coordinator": False},
+    {"phone": "8888888888", "name": "Kusum", "is_coordinator": False},
+    {"phone": "9999999999", "name": "Lina", "is_coordinator": False},
+    {"phone": "1010101010", "name": "Pravy", "is_coordinator": False},
+]
+
+
+def seed_volunteers(db: sqlite3.Connection) -> list[Volunteer]:
+    """Create 10 deterministic dummy volunteers.
+
+    Idempotent: skips any volunteer whose phone already exists.
+    Returns the full list of volunteers (created or pre-existing).
+    """
+    result: list[Volunteer] = []
+    for entry in VOLUNTEER_DATA:
+        existing = get_volunteer_by_phone(db, entry["phone"])
+        if existing is not None:
+            result.append(existing)
+            continue
+        vol = create_volunteer(
+            db,
+            VolunteerCreate(
+                phone=entry["phone"],
+                name=entry["name"],
+                is_coordinator=entry["is_coordinator"],
+            ),
+        )
+        result.append(vol)
+    return result
