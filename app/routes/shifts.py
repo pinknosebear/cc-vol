@@ -1,13 +1,14 @@
-"""Shift routes: day detail endpoint."""
+"""Shift routes: month list and day detail endpoints."""
 
 from __future__ import annotations
 
+import re
 from datetime import date
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 
-from app.models.shift import get_shifts_by_date
+from app.models.shift import get_shifts_by_date, get_shifts_by_month
 from app.models.signup import get_active_signups_by_shift
 
 
@@ -43,6 +44,43 @@ def _get_db(request: Request):
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
+@router.get("", response_model=None)
+def list_shifts(request: Request, month: str = Query(..., description="YYYY-MM")):
+    """Return shifts for a given month with signup counts."""
+    if not re.match(r"^\d{4}-\d{2}$", month):
+        raise HTTPException(status_code=400, detail="month must be YYYY-MM format")
+
+    year_str, month_str = month.split("-")
+    year = int(year_str)
+    mo = int(month_str)
+
+    if mo < 1 or mo > 12:
+        raise HTTPException(status_code=400, detail="month must be 01-12")
+
+    db = request.app.state.db
+    shifts = get_shifts_by_month(db, year, mo)
+
+    results = []
+    for s in shifts:
+        row = db.execute(
+            "SELECT COUNT(*) as cnt FROM signups WHERE shift_id = ? AND dropped_at IS NULL",
+            (s.id,),
+        ).fetchone()
+        signup_count = row["cnt"] if row else 0
+
+        results.append(
+            {
+                "id": s.id,
+                "date": s.date.isoformat(),
+                "type": s.type,
+                "capacity": s.capacity,
+                "signup_count": signup_count,
+            }
+        )
+
+    return results
+
 
 @router.get("/{date}", response_model=list[ShiftDetail])
 def get_day_detail(date: date, db=Depends(_get_db)):
