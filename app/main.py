@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import get_db_connection, create_tables
+from app.routes.shifts import router as shifts_router
 
 app = FastAPI(title="cc-vol", description="Volunteer Scheduling System")
 
@@ -11,6 +12,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(shifts_router)
 
 DB_PATH = "cc-vol.db"
 
