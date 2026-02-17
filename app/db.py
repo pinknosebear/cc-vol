@@ -22,7 +22,12 @@ def create_tables(conn: sqlite3.Connection) -> None:
             phone TEXT UNIQUE NOT NULL,
             name TEXT NOT NULL,
             is_coordinator BOOLEAN DEFAULT FALSE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            status TEXT DEFAULT 'approved' CHECK(status IN ('pending', 'approved', 'rejected')),
+            requested_at TIMESTAMP,
+            approved_at TIMESTAMP,
+            approved_by INTEGER,
+            FOREIGN KEY (approved_by) REFERENCES volunteers(id)
         );
 
         CREATE TABLE IF NOT EXISTS shifts (
