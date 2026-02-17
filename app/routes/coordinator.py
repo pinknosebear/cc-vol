@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from app.models.shift import get_shifts_by_date
 from app.models.signup import get_active_signups_by_shift
 from app.rules.queries import get_total_count
+from app.seed import seed_month
 
 router = APIRouter(prefix="/api/coordinator", tags=["coordinator"])
 
@@ -173,3 +174,11 @@ def get_available_volunteers(
             )
 
     return available
+
+
+@router.post("/seed/{year}/{month}")
+def seed_month_shifts(year: int, month: int, request: Request):
+    """Seed shifts for a given month. Idempotent."""
+    db = request.app.state.db
+    created = seed_month(db, year, month)
+    return {"created": created, "month": f"{year:04d}-{month:02d}"}

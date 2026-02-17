@@ -8,7 +8,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 
-from app.models.volunteer import get_volunteer_by_phone
+from app.models.volunteer import get_volunteer_by_phone, create_volunteer, VolunteerCreate, list_volunteers
 from app.models.signup import get_signups_by_volunteer
 from app.models.shift import Shift
 
@@ -31,6 +31,25 @@ class ShiftDetail(BaseModel):
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+
+@router.post("", status_code=201)
+def add_volunteer(body: VolunteerCreate, request: Request):
+    """Register a new volunteer."""
+    db = request.app.state.db
+    existing = get_volunteer_by_phone(db, body.phone)
+    if existing:
+        raise HTTPException(status_code=409, detail="Phone already registered")
+    vol = create_volunteer(db, body)
+    return {"id": vol.id, "phone": vol.phone, "name": vol.name, "is_coordinator": vol.is_coordinator}
+
+
+@router.get("")
+def get_volunteers(request: Request):
+    """List all volunteers."""
+    db = request.app.state.db
+    vols = list_volunteers(db)
+    return [{"id": v.id, "phone": v.phone, "name": v.name, "is_coordinator": v.is_coordinator} for v in vols]
+
 
 @router.get("/{phone}/shifts", response_model=list[ShiftDetail])
 def get_volunteer_shifts(
