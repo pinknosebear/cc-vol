@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from app.models.signup import SignupCreate, create_signup, drop_signup
 from app.models.volunteer import get_volunteer_by_phone
 from app.rules.validator import validate_signup
+from app.notifications.sender import send_message
 
 router = APIRouter(prefix="/api/signups", tags=["signups"])
 
@@ -67,3 +68,35 @@ def delete_signup(signup_id: int, db: sqlite3.Connection = Depends(_get_db)):
 
     drop_signup(db, signup_id)
     return Response(status_code=204)
+
+
+class NotifyDropRequest(BaseModel):
+    volunteer_phone: str
+    shift_date: str
+    shift_type: str
+
+
+@router.post("/notify-drop", status_code=200)
+def notify_coordinator_drop(body: NotifyDropRequest, db: sqlite3.Connection = Depends(_get_db)):
+    """Notify a coordinator via WhatsApp that a volunteer dropped a shift within a week."""
+    # Look up volunteer
+    volunteer = get_volunteer_by_phone(db, body.volunteer_phone)
+    if volunteer is None:
+        raise HTTPException(status_code=404, detail="Volunteer not found")
+
+    # Find a coordinator
+    row = db.execute(
+        "SELECT id FROM volunteers WHERE is_coordinator = 1 LIMIT 1"
+    ).fetchone()
+    if row is None:
+        # No coordinator, just return success (notification not sent but not an error)
+        return {"success": False, "message": "No coordinator found"}
+
+    coordinator_id = row["id"]
+
+    # Send message
+    shift_label = "Kakad" if body.shift_type == "kakad" else "Robe"
+    message = f"{volunteer.name} ({body.volunteer_phone}) dropped {shift_label} shift on {body.shift_date}"
+
+    result = send_message(db, coordinator_id, message, notification_type="drop_alert")
+    return result

@@ -80,3 +80,11 @@ export function createSignup(phone, shiftId) {
 export function deleteSignup(signupId) {
   return deleteRequest(`${BASE}/api/signups/${signupId}`);
 }
+
+export function notifyCoordinatorDroppedShift(phone, shiftDate, shiftType) {
+  return postJSON(`${BASE}/api/signups/notify-drop`, {
+    volunteer_phone: phone,
+    shift_date: shiftDate,
+    shift_type: shiftType,
+  });
+}

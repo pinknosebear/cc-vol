@@ -3,6 +3,7 @@ import {
   fetchMyShifts,
   createSignup,
   deleteSignup,
+  notifyCoordinatorDroppedShift,
 } from "./api.js";
 import { renderMonthPicker } from "./month-picker.js";
 import { renderCalendar } from "./calendar.js";
@@ -201,6 +202,48 @@ async function handleDrop(signupId) {
   }
 }
 
+async function handleDropWithNotification(signupId, shiftDate, shiftType) {
+  try {
+    const daysUntilShift = daysUntil(shiftDate);
+
+    // If within 7 days, notify coordinator via WhatsApp
+    if (daysUntilShift <= 7) {
+      try {
+        await notifyCoordinatorDroppedShift(state.phone, shiftDate, shiftType);
+      } catch (err) {
+        // Notification failed but allow drop to proceed
+        console.warn("Failed to notify coordinator:", err);
+      }
+    }
+
+    // Always delete the signup
+    await deleteSignup(signupId);
+
+    // Remove from tracking
+    for (const [shiftId, id] of state.signedUpMap.entries()) {
+      if (id === signupId) {
+        state.signedUpShiftIds.delete(shiftId);
+        state.signedUpMap.delete(shiftId);
+        break;
+      }
+    }
+
+    // Refresh both calendar and my shifts
+    if (activeTab === "calendar") loadCalendar();
+    if (activeTab === "my-shifts") loadMyShifts();
+  } catch (err) {
+    throw err;
+  }
+}
+
+function daysUntil(dateStr) {
+  const shiftDate = new Date(dateStr + "T00:00:00");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = shiftDate - today;
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
+
 function renderMyShifts(shifts) {
   myShiftsEl.innerHTML = "";
 
@@ -214,6 +257,14 @@ function renderMyShifts(shifts) {
   const grid = document.createElement("div");
   grid.id = "my-shifts-grid";
 
+  // Rebuild signedUpShiftIds and signedUpMap for accurate button state
+  state.signedUpShiftIds.clear();
+  state.signedUpMap.clear();
+  for (const shiftDetail of shifts) {
+    state.signedUpShiftIds.add(shiftDetail.shift_id);
+    state.signedUpMap.set(shiftDetail.shift_id, shiftDetail.signup_id);
+  }
+
   for (const shiftDetail of shifts) {
     // Transform API response to shift object with id field
     const shift = {
@@ -226,7 +277,7 @@ function renderMyShifts(shifts) {
     const panel = document.createElement("div");
     renderShiftPanel(panel, shift, state.signedUpShiftIds, state.signedUpMap, {
       onSignUp: handleSignUp,
-      onDrop: handleDrop,
+      onDrop: (signupId) => handleDropWithNotification(signupId, shift.date, shift.type),
     });
     grid.appendChild(panel);
   }
