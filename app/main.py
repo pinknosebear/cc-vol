@@ -1,5 +1,9 @@
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.db import get_db_connection, create_tables
 from app.routes.coordinator import router as coordinator_router
@@ -41,6 +45,15 @@ def shutdown():
 def get_db(request: Request):
     """Dependency helper for route handlers to get the DB connection."""
     return request.app.state.db
+
+
+STATIC_DIR = Path(__file__).parent / "static"
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+@app.get("/")
+def index():
+    return FileResponse(STATIC_DIR / "chat.html")
 
 
 @app.get("/healthz")

@@ -19,25 +19,39 @@ def handle_my_shifts(
         args: dict with optional key "month" (str, "YYYY-MM").
               Defaults to current month if not specified.
     """
-    month = args.get("month") or date.today().strftime("%Y-%m")
+    month = args.get("month")
 
-    rows = db.execute(
-        """
-        SELECT s.date, s.shift_type
-        FROM signups su
-        JOIN shifts s ON su.shift_id = s.id
-        WHERE su.volunteer_id = ?
-          AND su.dropped_at IS NULL
-          AND s.date LIKE ?
-        ORDER BY s.date, s.shift_type
-        """,
-        (context.volunteer_id, f"{month}%"),
-    ).fetchall()
+    if month:
+        rows = db.execute(
+            """
+            SELECT s.date, s.shift_type
+            FROM signups su
+            JOIN shifts s ON su.shift_id = s.id
+            WHERE su.volunteer_id = ?
+              AND su.dropped_at IS NULL
+              AND s.date LIKE ?
+            ORDER BY s.date, s.shift_type
+            """,
+            (context.volunteer_id, f"{month}%"),
+        ).fetchall()
+    else:
+        rows = db.execute(
+            """
+            SELECT s.date, s.shift_type
+            FROM signups su
+            JOIN shifts s ON su.shift_id = s.id
+            WHERE su.volunteer_id = ?
+              AND su.dropped_at IS NULL
+            ORDER BY s.date, s.shift_type
+            """,
+            (context.volunteer_id,),
+        ).fetchall()
 
+    label = month or "all months"
     if not rows:
-        return f"You have no shifts for {month}"
+        return f"You have no shifts for {label}"
 
-    lines = [f"Your shifts for {month}:"]
+    lines = [f"Your shifts ({label}):"]
     for row in rows:
         lines.append(f"- {row['date']} {row['shift_type']}")
     return "\n".join(lines)
