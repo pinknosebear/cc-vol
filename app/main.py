@@ -59,6 +59,11 @@ def index():
     return FileResponse(STATIC_DIR / "chat.html")
 
 
+@app.get("/dashboard")
+def dashboard():
+    return FileResponse(STATIC_DIR / "dashboard.html")
+
+
 @app.get("/healthz")
 def healthz():
     return {"status": "ok"}

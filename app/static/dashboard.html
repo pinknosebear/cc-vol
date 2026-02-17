@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>cc-vol Coordinator Dashboard</title>
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+  <header class="dashboard-header">
+    <h1>cc-vol Dashboard</h1>
+  </header>
+  <nav class="tab-bar">
+    <button class="tab tab--active" data-tab="calendar">Calendar</button>
+    <button class="tab" data-tab="gaps">Gaps</button>
+    <button class="tab" data-tab="volunteers">Volunteers</button>
+  </nav>
+  <main class="dashboard-grid">
+    <div id="month-picker"></div>
+    <div id="calendar"></div>
+    <div id="day-detail"></div>
+    <div id="gaps"></div>
+    <div id="volunteers"></div>
+  </main>
+  <script type="module" src="/static/js/api.js"></script>
+  <script type="module" src="/static/js/month-picker.js"></script>
+  <script type="module" src="/static/js/calendar.js"></script>
+  <script type="module" src="/static/js/day-detail.js"></script>
+  <script type="module" src="/static/js/gaps.js"></script>
+  <script type="module" src="/static/js/volunteers.js"></script>
+  <script type="module" src="/static/js/main.js"></script>
+</body>
+</html>
