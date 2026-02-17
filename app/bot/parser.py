@@ -12,7 +12,7 @@ import re
 
 @dataclass
 class ParsedCommand:
-    command_type: str  # "signup", "drop", "my_shifts", "shifts", "status", "gaps", "find_sub", "help", "register"
+    command_type: str  # "signup", "drop", "my_shifts", "shifts", "status", "gaps", "find_sub", "help", "register", "approve", "reject", "pending"
     args: dict
 
 
@@ -23,7 +23,7 @@ class ParseError:
 
 
 # Canonical command names for fuzzy matching
-COMMANDS = ["signup", "drop", "my shifts", "shifts", "status", "gaps", "find sub", "help", "register"]
+COMMANDS = ["signup", "drop", "my shifts", "shifts", "status", "gaps", "find sub", "help", "register", "approve", "reject", "pending"]
 
 # Valid shift types
 SHIFT_TYPES = {"kakad", "robe"}
@@ -113,7 +113,7 @@ def parse_date(text: str) -> Optional[date]:
 
 def _fuzzy_command(word: str) -> list[str]:
     """Return fuzzy matches for a single command word."""
-    single_word_commands = ["signup", "drop", "shifts", "status", "gaps", "help", "register"]
+    single_word_commands = ["signup", "drop", "shifts", "status", "gaps", "help", "register", "approve", "reject", "pending"]
     matches = get_close_matches(word, single_word_commands, n=3, cutoff=0.6)
     return matches
 
@@ -141,6 +141,24 @@ def parse_message(text: str) -> Union[ParsedCommand, ParseError]:
             return ParseError(original=original, suggestions=["register <your name>"])
         name = " ".join(tokens[1:])
         return ParsedCommand(command_type="register", args={"name": name})
+
+    # --- "approve <phone>" ---
+    if tokens[0] == "approve":
+        if len(tokens) < 2:
+            return ParseError(original=original, suggestions=["approve <phone>"])
+        phone = tokens[1]
+        return ParsedCommand(command_type="approve", args={"phone": phone})
+
+    # --- "reject <phone>" ---
+    if tokens[0] == "reject":
+        if len(tokens) < 2:
+            return ParseError(original=original, suggestions=["reject <phone>"])
+        phone = tokens[1]
+        return ParsedCommand(command_type="reject", args={"phone": phone})
+
+    # --- "pending" ---
+    if tokens[0] == "pending":
+        return ParsedCommand(command_type="pending", args={})
 
     # --- "gaps" ---
     if tokens[0] == "gaps":

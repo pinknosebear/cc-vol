@@ -14,11 +14,11 @@ from app.bot.handlers.vol_signup import handle_signup
 from app.bot.handlers.vol_drop import handle_drop
 from app.bot.handlers.vol_query import handle_my_shifts, handle_shifts
 from app.bot.handlers.coordinator import handle_status, handle_gaps, handle_find_sub
-from app.bot.handlers.registration import handle_register
+from app.bot.handlers.registration import handle_register, handle_approve, handle_reject, handle_pending
 
 router = APIRouter(tags=["whatsapp"])
 
-COORDINATOR_COMMANDS = {"status", "gaps", "find_sub"}
+COORDINATOR_COMMANDS = {"status", "gaps", "find_sub", "approve", "reject", "pending"}
 
 HELP_TEXT = (
     "Available commands:\n"
@@ -32,7 +32,10 @@ HELP_TEXT = (
     "Coordinator commands:\n"
     "- status <date>\n"
     "- gaps\n"
-    "- find sub <date> kakad|robe"
+    "- find sub <date> kakad|robe\n"
+    "- pending\n"
+    "- approve <phone>\n"
+    "- reject <phone>"
 )
 
 HANDLERS = {
@@ -44,6 +47,9 @@ HANDLERS = {
     "gaps": handle_gaps,
     "find_sub": handle_find_sub,
     "register": handle_register,
+    "approve": handle_approve,
+    "reject": handle_reject,
+    "pending": handle_pending,
 }
 
 
