@@ -1,9 +1,12 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require("@whiskeysockets/baileys");
-const pino = require("pino");
-const express = require("express");
-const qrcode = require("qrcode-terminal");
-const fs = require("fs");
-const path = require("path");
+import makeWASocket, { useMultiFileAuthState, DisconnectReason } from "@whiskeysockets/baileys";
+import pino from "pino";
+import express from "express";
+import qrcode from "qrcode-terminal";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const FASTAPI_URL = process.env.FASTAPI_URL || "http://localhost:8000";
 const PORT = parseInt(process.env.PORT, 10) || 3000;
