@@ -18,12 +18,14 @@ const botSentIds = new Set(); // track messages sent by the bot to avoid loops
 
 async function startWhatsApp() {
   // Ensure auth_info directory exists
-  const authDir = path.join(__dirname, "auth_info");
+  const authDir = process.env.RAILWAY_VOLUME_MOUNT_PATH
+    ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, "auth_info")
+    : path.join(__dirname, "auth_info");
   if (!fs.existsSync(authDir)) {
     fs.mkdirSync(authDir, { recursive: true });
   }
 
-  const { state, saveCreds } = await useMultiFileAuthState("auth_info");
+  const { state, saveCreds } = await useMultiFileAuthState(authDir);
 
   sock = makeWASocket({
     auth: state,
