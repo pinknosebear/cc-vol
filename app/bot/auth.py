@@ -18,10 +18,10 @@ def get_volunteer_context(
 ) -> VolunteerContext | None:
     """Look up a volunteer by phone and return their context.
 
-    Returns None if the phone number is not registered.
+    Returns None if the phone number is not registered or not approved.
     """
     volunteer = get_volunteer_by_phone(db, phone)
-    if volunteer is None:
+    if volunteer is None or volunteer.status != "approved":
         return None
     return VolunteerContext(
         volunteer_id=volunteer.id,

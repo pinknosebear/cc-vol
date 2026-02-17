@@ -44,11 +44,17 @@ def add_volunteer(body: VolunteerCreate, request: Request):
 
 
 @router.get("")
-def get_volunteers(request: Request):
-    """List all volunteers."""
+def get_volunteers(request: Request, status: Optional[str] = Query(None)):
+    """List all volunteers.
+
+    By default returns only approved volunteers.
+    Coordinators can use ?status= to filter by a specific status.
+    """
     db = request.app.state.db
-    vols = list_volunteers(db)
-    return [{"id": v.id, "phone": v.phone, "name": v.name, "is_coordinator": v.is_coordinator} for v in vols]
+    # If no status parameter provided, default to showing only approved volunteers
+    filter_status = status if status is not None else "approved"
+    vols = list_volunteers(db, status=filter_status)
+    return [{"id": v.id, "phone": v.phone, "name": v.name, "is_coordinator": v.is_coordinator, "status": v.status} for v in vols]
 
 
 @router.get("/{phone}/shifts", response_model=list[ShiftDetail])

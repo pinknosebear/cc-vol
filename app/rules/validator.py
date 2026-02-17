@@ -57,6 +57,18 @@ def validate_signup(
 
     An empty list means the signup is allowed.
     """
+    # Check if volunteer is approved
+    volunteer = db.execute(
+        "SELECT * FROM volunteers WHERE id = ?", (volunteer_id,)
+    ).fetchone()
+    if volunteer is None or volunteer["status"] != "approved":
+        return [
+            RuleResult(
+                allowed=False,
+                reason="Volunteer is not approved to sign up",
+            )
+        ]
+
     shift = _get_shift_details(db, shift_id)
     shift_date: date = shift["date"]
     shift_type: str = shift["shift_type"]
