@@ -1,4 +1,3 @@
-
 ## tt — cross-session coordination
 
 you are working on a single task. your full context was injected at session start.
