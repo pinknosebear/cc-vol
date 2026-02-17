@@ -1,1 +1,27 @@
 .DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+
+# Database (local dev; Railway uses volumes)
+*.db
+*.db-shm
+*.db-wal
+
+# Node
+node_modules/
+
+# WhatsApp session (local dev; Railway uses volumes)
+wa-bridge/auth_info/
+
+# tt task tracker local state
+.tt/tasks.db*
+.tt/archive/
+
+# Claude session data
+.claude/
