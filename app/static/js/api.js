@@ -23,6 +23,17 @@ async function postJSON(url, data) {
   return resp.json();
 }
 
+async function deleteRequest(url) {
+  const resp = await fetch(url, { method: "DELETE" });
+  if (!resp.ok) {
+    const body = await resp.text();
+    throw new Error(`${resp.status}: ${body}`);
+  }
+  // 204 No Content - don't try to parse JSON
+  if (resp.status === 204) return null;
+  return resp.json();
+}
+
 export function fetchShifts(month) {
   return request(`${BASE}/api/shifts?month=${month}`);
 }
@@ -53,4 +64,19 @@ export function createVolunteer(phone, name, isCoordinator) {
 
 export function seedMonth(year, month) {
   return postJSON(`${BASE}/api/coordinator/seed/${year}/${month}`, {});
+}
+
+export function fetchMyShifts(phone, month) {
+  return request(`${BASE}/api/volunteers/${phone}/shifts?month=${month}`);
+}
+
+export function createSignup(phone, shiftId) {
+  return postJSON(`${BASE}/api/signups`, {
+    volunteer_phone: phone,
+    shift_id: shiftId,
+  });
+}
+
+export function deleteSignup(signupId) {
+  return deleteRequest(`${BASE}/api/signups/${signupId}`);
 }

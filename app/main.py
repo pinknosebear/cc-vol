@@ -62,6 +62,11 @@ def dashboard():
     return FileResponse(STATIC_DIR / "dashboard.html")
 
 
+@app.get("/volunteer")
+def volunteer():
+    return FileResponse(STATIC_DIR / "volunteer.html")
+
+
 @app.get("/healthz")
 def healthz():
     return {"status": "ok"}

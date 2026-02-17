@@ -30,6 +30,24 @@ body {
   padding: 16px 24px;
 }
 .dashboard-header h1 { font-size: 20px; font-weight: 600; }
+.phone-field {
+  margin-top: 12px;
+}
+.phone-field input[type="tel"] {
+  width: 100%;
+  max-width: 300px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius);
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--color-text);
+}
+.phone-field input[type="tel"]:focus {
+  outline: none;
+  background: white;
+  border-color: white;
+}
 
 /* === Tab Bar === */
 .tab-bar {
@@ -155,6 +173,12 @@ body {
 .btn--primary:hover { background: var(--color-primary-hover); }
 .btn--secondary { background: var(--color-surface); }
 .btn--secondary:hover { background: var(--color-bg); }
+.btn--drop {
+  background: #f44336;
+  color: white;
+  border-color: #f44336;
+}
+.btn--drop:hover { background: #d32f2f; }
 
 /* === Month Picker === */
 .month-picker {
@@ -204,6 +228,51 @@ body {
 .form-message { padding: 8px; border-radius: 4px; font-size: 13px; margin-top: 8px; }
 .form-message--success { background: #e8f5e9; color: #2e7d32; }
 .form-message--error { background: #ffebee; color: #c62828; }
+
+/* === Shift Cards (Volunteer Portal) === */
+.shift-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 12px;
+  background: var(--color-surface);
+  margin-bottom: 12px;
+}
+.shift-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+.shift-capacity {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.shift-date {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+}
+.shift-full {
+  font-size: 12px;
+  color: var(--color-empty);
+  font-weight: 500;
+  padding: 6px 0;
+}
+.day-shifts-container h3 {
+  margin-bottom: 12px;
+}
+
+/* === My Shifts Grid === */
+#my-shifts { grid-column: 1 / -1; }
+#my-shifts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
 
 /* === Responsive === */
 @media (max-width: 768px) {

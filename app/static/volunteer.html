@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>cc-vol Volunteer Portal</title>
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+  <header class="dashboard-header">
+    <h1>Volunteer Portal</h1>
+    <div class="phone-field">
+      <input
+        type="tel"
+        id="phone-input"
+        placeholder="Enter your phone number"
+        aria-label="Phone number"
+      >
+    </div>
+  </header>
+  <nav class="tab-bar">
+    <button class="tab tab--active" data-tab="calendar">Calendar</button>
+    <button class="tab" data-tab="my-shifts">My Shifts</button>
+  </nav>
+  <main class="dashboard-grid">
+    <div id="month-picker"></div>
+    <div id="calendar"></div>
+    <div id="my-shifts"></div>
+  </main>
+  <script type="module" src="/static/js/api.js"></script>
+  <script type="module" src="/static/js/month-picker.js"></script>
+  <script type="module" src="/static/js/calendar.js"></script>
+  <script type="module" src="/static/js/vol-shift-panel.js"></script>
+  <script type="module" src="/static/js/vol-main.js"></script>
+</body>
+</html>
