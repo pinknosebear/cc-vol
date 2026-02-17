@@ -43,7 +43,7 @@ export function renderShiftPanel(container, shift, signedUpShiftIds, signedUpMap
       try {
         await handlers.onDrop(signupId);
       } catch (err) {
-        showError(card, err.message);
+        showError(card, parseErrorMessage(err.message));
       }
     });
     card.appendChild(dropBtn);
@@ -55,7 +55,7 @@ export function renderShiftPanel(container, shift, signedUpShiftIds, signedUpMap
       try {
         await handlers.onSignUp(shift.id);
       } catch (err) {
-        showError(card, err.message);
+        showError(card, parseErrorMessage(err.message));
       }
     });
     card.appendChild(signupBtn);
@@ -77,6 +77,44 @@ function formatDate(dateStr) {
     month: "short",
     day: "numeric",
   });
+}
+
+function parseErrorMessage(errMessage) {
+  // Try to extract user-friendly error from API response
+  // Format: "422: {...}"
+  if (errMessage.includes("422:")) {
+    try {
+      const jsonStr = errMessage.substring(errMessage.indexOf("{"));
+      const json = JSON.parse(jsonStr);
+
+      // Handle detail array with reason field
+      if (json.detail && Array.isArray(json.detail) && json.detail.length > 0) {
+        if (json.detail[0].reason) {
+          return json.detail[0].reason;
+        }
+      }
+
+      // Handle generic detail string
+      if (json.detail && typeof json.detail === "string") {
+        return json.detail;
+      }
+    } catch (e) {
+      // If JSON parsing fails, fall through to generic message
+    }
+  }
+
+  // Check for duplicate signup
+  if (errMessage.includes("409")) {
+    return "You're already signed up for this shift.";
+  }
+
+  // Check for shift not found
+  if (errMessage.includes("404")) {
+    return "This shift is no longer available.";
+  }
+
+  // Fall back to original message
+  return errMessage;
 }
 
 function showError(container, message) {
