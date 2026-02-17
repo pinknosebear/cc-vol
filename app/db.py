@@ -49,5 +49,16 @@ def create_tables(conn: sqlite3.Connection) -> None:
             FOREIGN KEY (shift_id) REFERENCES shifts(id),
             UNIQUE(volunteer_id, shift_id)
         );
+
+        CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            volunteer_id INTEGER NOT NULL,
+            type TEXT NOT NULL CHECK(type IN ('reminder', 'escalation', 'welcome', 'alert')),
+            message TEXT NOT NULL,
+            sent_at TIMESTAMP,
+            ack_at TIMESTAMP,
+            error TEXT,
+            FOREIGN KEY (volunteer_id) REFERENCES volunteers(id)
+        );
         """
     )
