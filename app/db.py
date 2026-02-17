@@ -3,7 +3,7 @@ import sqlite3
 
 def get_db_connection(db_path: str = ":memory:") -> sqlite3.Connection:
     """Return a sqlite3 connection with Row factory for dict-like access."""
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn

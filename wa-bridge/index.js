@@ -2,6 +2,8 @@ const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = requi
 const pino = require("pino");
 const express = require("express");
 const qrcode = require("qrcode-terminal");
+const fs = require("fs");
+const path = require("path");
 
 const FASTAPI_URL = process.env.FASTAPI_URL || "http://localhost:8000";
 const PORT = parseInt(process.env.PORT, 10) || 3000;
@@ -10,16 +12,22 @@ const logger = pino({ level: "warn" });
 
 let sock = null;
 let connectionStatus = "disconnected";
+const botSentIds = new Set(); // track messages sent by the bot to avoid loops
 
 // ── WhatsApp connection ────────────────────────────────────────────
 
 async function startWhatsApp() {
+  // Ensure auth_info directory exists
+  const authDir = path.join(__dirname, "auth_info");
+  if (!fs.existsSync(authDir)) {
+    fs.mkdirSync(authDir, { recursive: true });
+  }
+
   const { state, saveCreds } = await useMultiFileAuthState("auth_info");
 
   sock = makeWASocket({
     auth: state,
     logger,
-    printQRInTerminal: false, // we handle QR ourselves
   });
 
   sock.ev.on("creds.update", saveCreds);
@@ -48,7 +56,7 @@ async function startWhatsApp() {
       );
 
       if (shouldReconnect) {
-        startWhatsApp();
+        setTimeout(() => startWhatsApp(), 3000); // Wait 3s before retry
       }
     }
   });
@@ -59,14 +67,18 @@ async function startWhatsApp() {
     if (type !== "notify") return;
 
     for (const msg of messages) {
-      // Only forward text messages, skip our own outgoing messages
-      if (msg.key.fromMe) continue;
+      // Skip messages the bot itself sent (prevents reply loops)
+      if (botSentIds.has(msg.key.id)) {
+        botSentIds.delete(msg.key.id);
+        continue;
+      }
+
       const text =
         msg.message?.conversation ||
         msg.message?.extendedTextMessage?.text;
       if (!text) continue;
 
-      const phone = msg.key.remoteJid.replace("@s.whatsapp.net", "");
+      const phone = msg.key.remoteJid.replace(/@(s\.whatsapp\.net|lid)$/, "");
 
       try {
         const res = await fetch(`${FASTAPI_URL}/api/wa/incoming`, {
@@ -76,6 +88,12 @@ async function startWhatsApp() {
         });
         if (!res.ok) {
           console.error(`FastAPI responded ${res.status}`);
+        } else {
+          const data = await res.json();
+          if (data.reply) {
+            const sent = await sock.sendMessage(msg.key.remoteJid, { text: data.reply });
+            if (sent?.key?.id) botSentIds.add(sent.key.id);
+          }
         }
       } catch (err) {
         console.error("Failed to forward message to FastAPI:", err.message);
