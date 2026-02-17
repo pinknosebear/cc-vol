@@ -14,6 +14,7 @@ from app.bot.handlers.vol_signup import handle_signup
 from app.bot.handlers.vol_drop import handle_drop
 from app.bot.handlers.vol_query import handle_my_shifts, handle_shifts
 from app.bot.handlers.coordinator import handle_status, handle_gaps, handle_find_sub
+from app.bot.handlers.registration import handle_register
 
 router = APIRouter(tags=["whatsapp"])
 
@@ -21,6 +22,7 @@ COORDINATOR_COMMANDS = {"status", "gaps", "find_sub"}
 
 HELP_TEXT = (
     "Available commands:\n"
+    "- register <your name>\n"
     "- signup <date> kakad|robe\n"
     "- drop <date> kakad|robe\n"
     "- my shifts\n"
@@ -41,6 +43,7 @@ HANDLERS = {
     "status": handle_status,
     "gaps": handle_gaps,
     "find_sub": handle_find_sub,
+    "register": handle_register,
 }
 
 
@@ -55,20 +58,29 @@ def wa_incoming(body: IncomingMessage, request: Request):
 
     # 1. Auth: look up volunteer by phone
     context = get_volunteer_context(db, body.phone)
-    if context is None:
-        return {"reply": "Phone not registered."}
 
-    # 2. Parse the message
+    # 2. Parse the message (even if auth failed)
     parsed = parse_message(body.message)
     if isinstance(parsed, ParseError):
         suggestions = ", ".join(parsed.suggestions) if parsed.suggestions else "help"
         return {"reply": f"I didn't understand that. Did you mean: {suggestions}?"}
 
-    # 3. Check coordinator-only commands
+    # 3. Handle unauthenticated requests
+    if context is None:
+        # Allow help and register for unauthenticated users
+        if parsed.command_type == "help":
+            return {"reply": HELP_TEXT}
+        if parsed.command_type == "register":
+            result = handle_register(db, body.phone, parsed.args)
+            return {"reply": result}
+        # Other commands require authentication
+        return {"reply": "Send 'register <your name>' to join the volunteer program."}
+
+    # 4. Check coordinator-only commands
     if parsed.command_type in COORDINATOR_COMMANDS and not context.is_coordinator:
         return {"reply": "That command is for coordinators only."}
 
-    # 4. Route to handler
+    # 5. Route to handler
     if parsed.command_type == "help":
         return {"reply": HELP_TEXT}
 

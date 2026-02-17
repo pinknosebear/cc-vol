@@ -65,7 +65,16 @@ class TestUnknownPhone:
             json={"phone": "+919999999999", "message": "help"},
         )
         assert resp.status_code == 200
-        assert resp.json()["reply"] == "Phone not registered."
+        # Unauthenticated users can see help (which includes register command)
+        assert "register" in resp.json()["reply"].lower()
+
+    def test_unregistered_phone_invalid_command_prompts_register(self, client):
+        resp = client.post(
+            "/api/wa/incoming",
+            json={"phone": "+919999999999", "message": "signup 2026-03-01 kakad"},
+        )
+        assert resp.status_code == 200
+        assert "register" in resp.json()["reply"].lower()
 
 
 class TestUnparseableMessage:

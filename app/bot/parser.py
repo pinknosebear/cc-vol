@@ -12,7 +12,7 @@ import re
 
 @dataclass
 class ParsedCommand:
-    command_type: str  # "signup", "drop", "my_shifts", "shifts", "status", "gaps", "find_sub", "help"
+    command_type: str  # "signup", "drop", "my_shifts", "shifts", "status", "gaps", "find_sub", "help", "register"
     args: dict
 
 
@@ -23,7 +23,7 @@ class ParseError:
 
 
 # Canonical command names for fuzzy matching
-COMMANDS = ["signup", "drop", "my shifts", "shifts", "status", "gaps", "find sub", "help"]
+COMMANDS = ["signup", "drop", "my shifts", "shifts", "status", "gaps", "find sub", "help", "register"]
 
 # Valid shift types
 SHIFT_TYPES = {"kakad", "robe"}
@@ -113,7 +113,7 @@ def parse_date(text: str) -> Optional[date]:
 
 def _fuzzy_command(word: str) -> list[str]:
     """Return fuzzy matches for a single command word."""
-    single_word_commands = ["signup", "drop", "shifts", "status", "gaps", "help"]
+    single_word_commands = ["signup", "drop", "shifts", "status", "gaps", "help", "register"]
     matches = get_close_matches(word, single_word_commands, n=3, cutoff=0.6)
     return matches
 
@@ -134,6 +134,13 @@ def parse_message(text: str) -> Union[ParsedCommand, ParseError]:
     # --- "help" ---
     if tokens[0] == "help":
         return ParsedCommand(command_type="help", args={})
+
+    # --- "register <name>" ---
+    if tokens[0] == "register":
+        if len(tokens) < 2:
+            return ParseError(original=original, suggestions=["register <your name>"])
+        name = " ".join(tokens[1:])
+        return ParsedCommand(command_type="register", args={"name": name})
 
     # --- "gaps" ---
     if tokens[0] == "gaps":
