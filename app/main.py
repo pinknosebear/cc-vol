@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -27,7 +28,7 @@ app.include_router(signups_router)
 app.include_router(volunteers_router)
 app.include_router(wa_incoming_router)
 
-DB_PATH = "cc-vol.db"
+DB_PATH = os.getenv("DB_PATH", "cc-vol.db")
 
 
 @app.on_event("startup")
