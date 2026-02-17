@@ -78,6 +78,16 @@
 Multiple volunteers sign up for the same shift_id. UNIQUE(volunteer_id, shift_id) prevents double signup. Capacity check = count active signups < capacity.
 **Impact:** Simpler schema, fewer rows, no slot_number needed. UNIQUE constraint changes from UNIQUE(date, type, capacity) to UNIQUE(date, type).
 
+## D12: Orchestrator owns tt lifecycle, not agents
+**Date:** 2026-02-13
+**Context:** First agent batch (p1-01, p1-02, p3-10) couldn't run `tt start` because Bash was denied to subagents. Agents wrote code without worktrees, without commits, without `tt done`. Orchestrator had to clean up manually.
+**Decision:** The orchestrator (parent session) runs `tt start` before launching agents and `tt done` after verifying their work. Agents never touch tt commands. This should become a `tt exec` command in the tt tool itself.
+**Rationale:**
+- Agents are unreliable (permission issues, crashes, forgetfulness)
+- Worktree setup is a prerequisite that must succeed before any code is written
+- Verification (tests pass, commit clean) belongs to the orchestrator, not the agent
+**Impact:** More reliable task execution. Candidate for upstream tt feature (`tt exec <id> -- <cmd>`).
+
 ## D11: Two-phase signup period with revised limits
 **Date:** 2026-02-13
 **Context:** Original plan had single signup period with max 4 total. Actual process is more nuanced.
