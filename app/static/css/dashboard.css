@@ -65,6 +65,11 @@ body {
   grid-template-columns: 1fr 320px;
   gap: 24px;
 }
+#month-picker { grid-column: 1 / -1; }
+#calendar { grid-column: 1; }
+#day-detail { grid-column: 2; grid-row: 2; }
+#gaps { grid-column: 1 / -1; }
+#volunteers { grid-column: 1 / -1; }
 
 /* === Card Component === */
 .card {

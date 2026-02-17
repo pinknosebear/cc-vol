@@ -28,14 +28,12 @@ app.include_router(signups_router)
 app.include_router(volunteers_router)
 app.include_router(wa_incoming_router)
 
-DB_PATH = os.getenv("DB_PATH", "cc-vol.db")
-
-
 @app.on_event("startup")
 def startup():
-    db_dir = Path(DB_PATH).parent
+    db_path = os.getenv("DB_PATH", "cc-vol.db")
+    db_dir = Path(db_path).parent
     db_dir.mkdir(parents=True, exist_ok=True)
-    conn = get_db_connection(DB_PATH)
+    conn = get_db_connection(db_path)
     create_tables(conn)
     app.state.db = conn
 

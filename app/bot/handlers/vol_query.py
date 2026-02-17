@@ -51,7 +51,7 @@ def handle_my_shifts(
     if not rows:
         return f"You have no shifts for {label}"
 
-    lines = [f"Your shifts ({label}):"]
+    lines = [f"Your shifts for {label}:"]
     for row in rows:
         lines.append(f"- {row['date']} {row['shift_type']}")
     return "\n".join(lines)
