@@ -33,6 +33,8 @@ DB_PATH = os.getenv("DB_PATH", "cc-vol.db")
 
 @app.on_event("startup")
 def startup():
+    db_dir = Path(DB_PATH).parent
+    db_dir.mkdir(parents=True, exist_ok=True)
     conn = get_db_connection(DB_PATH)
     create_tables(conn)
     app.state.db = conn
