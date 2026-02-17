@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -24,9 +25,9 @@ class Volunteer(BaseModel):
     is_coordinator: bool
     created_at: datetime
     status: str
-    requested_at: datetime | None
-    approved_at: datetime | None
-    approved_by: int | None
+    requested_at: Optional[datetime]
+    approved_at: Optional[datetime]
+    approved_by: Optional[int]
 
 
 # ---------------------------------------------------------------------------
@@ -60,7 +61,7 @@ def create_volunteer(db: sqlite3.Connection, data: VolunteerCreate) -> Volunteer
     return _row_to_volunteer(row)
 
 
-def get_volunteer_by_phone(db: sqlite3.Connection, phone: str) -> Volunteer | None:
+def get_volunteer_by_phone(db: sqlite3.Connection, phone: str) -> Optional[Volunteer]:
     """Look up a volunteer by phone number. Returns None if not found."""
     row = db.execute(
         "SELECT * FROM volunteers WHERE phone = ?", (phone,)
@@ -70,7 +71,7 @@ def get_volunteer_by_phone(db: sqlite3.Connection, phone: str) -> Volunteer | No
     return _row_to_volunteer(row)
 
 
-def list_volunteers(db: sqlite3.Connection, status: str | None = None) -> list[Volunteer]:
+def list_volunteers(db: sqlite3.Connection, status: Optional[str] = None) -> list[Volunteer]:
     """Return all volunteers, optionally filtered by status."""
     if status is None:
         rows = db.execute("SELECT * FROM volunteers").fetchall()
@@ -88,7 +89,7 @@ def get_pending_volunteers(db: sqlite3.Connection) -> list[Volunteer]:
 
 def approve_volunteer(
     db: sqlite3.Connection, phone: str, approver_id: int
-) -> Volunteer | None:
+) -> Optional[Volunteer]:
     """Approve a volunteer by phone. Returns the updated volunteer or None if not found."""
     # Check if volunteer exists
     vol = get_volunteer_by_phone(db, phone)
@@ -111,7 +112,7 @@ def approve_volunteer(
     return _row_to_volunteer(row)
 
 
-def reject_volunteer(db: sqlite3.Connection, phone: str) -> Volunteer | None:
+def reject_volunteer(db: sqlite3.Connection, phone: str) -> Optional[Volunteer]:
     """Reject a volunteer by phone. Returns the updated volunteer or None if not found."""
     # Check if volunteer exists
     vol = get_volunteer_by_phone(db, phone)
