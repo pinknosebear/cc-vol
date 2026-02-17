@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Month Picker Test</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; }
+    .month-picker { display: flex; align-items: center; gap: 1rem; }
+    .month-label { font-size: 1.25rem; font-weight: 600; min-width: 12rem; text-align: center; }
+    .btn--secondary { padding: 0.25rem 0.75rem; cursor: pointer; }
+    .pass { color: green; } .fail { color: red; }
+    #log { margin-top: 2rem; font-family: monospace; white-space: pre-line; }
+  </style>
+</head>
+<body>
+  <h1>Month Picker Tests</h1>
+  <div id="picker"></div>
+  <div id="log"></div>
+
+  <script type="module">
+    import { renderMonthPicker } from "../../app/static/js/month-picker.js";
+
+    const log = document.getElementById("log");
+    let passed = 0, failed = 0;
+
+    function assert(name, condition) {
+      if (condition) { passed++; log.innerHTML += `<span class="pass">PASS</span> ${name}\n`; }
+      else { failed++; log.innerHTML += `<span class="fail">FAIL</span> ${name}\n`; }
+    }
+
+    const container = document.getElementById("picker");
+
+    // Test 1: Basic render
+    renderMonthPicker(container, { year: 2026, month: 3, onChange: () => {} });
+    assert("Renders label", container.querySelector(".month-label").textContent === "March 2026");
+    assert("Has prev button", container.querySelectorAll("button").length >= 1);
+    assert("Has next button", container.querySelectorAll("button").length === 2);
+
+    // Test 2: Dec -> Jan rollover (next)
+    let cbYear, cbMonth;
+    renderMonthPicker(container, { year: 2025, month: 12, onChange: (y, m) => { cbYear = y; cbMonth = m; } });
+    container.querySelectorAll("button")[1].click();
+    assert("Dec next -> Jan", cbMonth === 1 && cbYear === 2026);
+
+    // Test 3: Jan -> Dec rollover (prev)
+    renderMonthPicker(container, { year: 2026, month: 1, onChange: (y, m) => { cbYear = y; cbMonth = m; } });
+    container.querySelectorAll("button")[0].click();
+    assert("Jan prev -> Dec", cbMonth === 12 && cbYear === 2025);
+
+    // Test 4: Normal next
+    renderMonthPicker(container, { year: 2026, month: 6, onChange: (y, m) => { cbYear = y; cbMonth = m; } });
+    container.querySelectorAll("button")[1].click();
+    assert("Jun next -> Jul", cbMonth === 7 && cbYear === 2026);
+
+    // Summary
+    log.innerHTML += `\n${passed} passed, ${failed} failed\n`;
+  </script>
+</body>
+</html>
