@@ -1,4 +1,4 @@
-import { fetchShifts, fetchDayDetail, fetchAvailable, fetchVolunteers, createVolunteer, seedMonth, deleteVolunteer } from "./api.js";
+import { fetchShifts, fetchDayDetail, fetchGaps, fetchAvailable, fetchVolunteers, createVolunteer, seedMonth, deleteVolunteer } from "./api.js";
 import { renderMonthPicker } from "./month-picker.js";
 import { renderCalendar } from "./calendar.js";
 import { renderDayDetail } from "./day-detail.js";
@@ -83,8 +83,8 @@ async function loadDayDetail(date) {
 
 async function loadGaps() {
   try {
-    const shifts = await fetchShifts(monthStr());
-    renderGaps(gapsEl, shifts, { year: state.year, month: state.month });
+    const gaps = await fetchGaps(monthStr());
+    renderGaps(gapsEl, gaps);
   } catch (err) {
     gapsEl.innerHTML = `<div class="card"><p>Error loading gaps: ${err.message}</p></div>`;
   }
