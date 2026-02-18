@@ -43,6 +43,23 @@ def _row_to_signup(row: sqlite3.Row) -> Signup:
 
 def create_signup(db: sqlite3.Connection, data: SignupCreate) -> Signup:
     """Insert a new signup and return it."""
+    existing = db.execute(
+        "SELECT * FROM signups WHERE volunteer_id = ? AND shift_id = ?",
+        (data.volunteer_id, data.shift_id),
+    ).fetchone()
+    if existing is not None:
+        if existing["dropped_at"] is not None:
+            db.execute(
+                "UPDATE signups SET dropped_at = NULL, signed_up_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (existing["id"],),
+            )
+            db.commit()
+            row = db.execute(
+                "SELECT * FROM signups WHERE id = ?", (existing["id"],)
+            ).fetchone()
+            return _row_to_signup(row)
+        return _row_to_signup(existing)
+
     cursor = db.execute(
         "INSERT INTO signups (volunteer_id, shift_id) VALUES (?, ?)",
         (data.volunteer_id, data.shift_id),
