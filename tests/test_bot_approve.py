@@ -1,5 +1,7 @@
 """Tests for p6-04: Coordinator approve/reject commands."""
 
+from unittest.mock import patch
+
 from fastapi.testclient import TestClient
 
 from app.db import get_db_connection, create_tables
@@ -77,13 +79,15 @@ class TestApproveRejectParser:
 
 
 class TestHandleApprove:
-    def test_approve_pending_volunteer(self):
+    @patch("app.bot.handlers.registration.send_message")
+    def test_approve_pending_volunteer(self, mock_send):
         """Should approve a pending volunteer."""
         db = get_db_connection(":memory:")
         create_tables(db)
 
         # Create pending volunteer
         _add_volunteer(db, "+1111111111", "Alice", status="pending")
+        mock_send.return_value = {"success": True, "notification_id": 1, "error": None}
 
         result = handle_approve(db, COORD_CTX, {"phone": "+1111111111"})
         assert "Approved" in result
@@ -95,6 +99,18 @@ class TestHandleApprove:
             "SELECT status FROM volunteers WHERE phone = ?", ("+1111111111",)
         ).fetchone()
         assert row["status"] == "approved"
+
+    @patch("app.bot.handlers.registration.send_message")
+    def test_approve_sends_welcome_message(self, mock_send):
+        db = get_db_connection(":memory:")
+        create_tables(db)
+
+        _add_volunteer(db, "+4444444444", "Dana", status="pending")
+        mock_send.return_value = {"success": True, "notification_id": 1, "error": None}
+
+        result = handle_approve(db, COORD_CTX, {"phone": "+4444444444"})
+        assert "Welcome message sent" in result
+        assert mock_send.call_count == 1
 
     def test_approve_already_approved(self):
         """Should return message if already approved."""
