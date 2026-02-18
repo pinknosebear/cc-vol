@@ -83,7 +83,15 @@ async function startWhatsApp() {
         msg.message?.extendedTextMessage?.text;
       if (!text) continue;
 
-      const phone = msg.key.remoteJid.replace(/@(s\.whatsapp\.net|lid)$/, "");
+      const jid = msg.key.remoteJid;
+      if (jid.endsWith("@lid")) {
+        // WhatsApp LID accounts don't expose phone numbers — can't identify the sender
+        await sock.sendMessage(jid, {
+          text: "Sorry, your WhatsApp account uses a privacy setting that hides your phone number. Please ask a coordinator to add you manually.",
+        });
+        continue;
+      }
+      const phone = jid.replace(/@s\.whatsapp\.net$/, "");
 
       try {
         const res = await fetch(`${FASTAPI_URL}/api/wa/incoming`, {

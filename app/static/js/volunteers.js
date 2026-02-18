@@ -6,7 +6,7 @@
  * @param {Array} volunteers - from GET /api/volunteers
  * @param {{ onAdd: function, onRemove: function }} opts
  */
-export function renderVolunteerList(container, volunteers, { onAdd, onRemove }) {
+export function renderVolunteerList(container, volunteers, { onAdd, onDelete }) {
   container.innerHTML = "";
 
   const card = document.createElement("div");
@@ -58,23 +58,18 @@ export function renderVolunteerList(container, volunteers, { onAdd, onRemove }) 
 
     const actionTd = document.createElement("td");
     actionTd.className = "py-2.5 px-3 text-right";
-    const removeBtn = document.createElement("button");
-    removeBtn.textContent = "Remove";
-    removeBtn.className = "text-xs text-red-500 hover:text-red-700 hover:underline cursor-pointer";
-    removeBtn.addEventListener("click", async () => {
-      if (!confirm(`Remove ${vol.name} from the volunteer list?`)) return;
-      removeBtn.disabled = true;
-      removeBtn.textContent = "Removing…";
+    const delBtn = document.createElement("button");
+    delBtn.className = "text-xs text-red-400 hover:text-red-600 transition-colors cursor-pointer";
+    delBtn.textContent = "Delete";
+    delBtn.addEventListener("click", async () => {
+      if (!confirm(`Delete ${vol.name}? This will also drop their active signups.`)) return;
       try {
-        await onRemove(vol.phone);
-        tr.remove();
+        await onDelete(vol.id);
       } catch (err) {
-        removeBtn.disabled = false;
-        removeBtn.textContent = "Remove";
-        alert(`Could not remove volunteer: ${err.message}`);
+        alert(`Failed to delete: ${err.message}`);
       }
     });
-    actionTd.appendChild(removeBtn);
+    actionTd.appendChild(delBtn);
 
     tr.append(nameTd, phoneTd, roleTd, actionTd);
     tbody.appendChild(tr);
