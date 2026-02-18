@@ -13,6 +13,7 @@ from app.models.volunteer import (
     approve_volunteer,
     reject_volunteer,
 )
+from app.notifications.sender import send_message
 
 
 def handle_register(
@@ -145,10 +146,22 @@ def handle_approve(
         if approved is None:
             return f"Could not approve {phone}. Please try again."
 
-        # TODO: Send welcome message via WA bridge
-        # send_wa_message(phone, welcome_text)
-
-        return f"Approved {approved.name} ({phone}). Welcome message will be sent."
+        welcome_text = (
+            f"Welcome {approved.name}! You're approved to volunteer. "
+            "Reply 'help' to see available commands."
+        )
+        result = send_message(
+            db,
+            approved.id,
+            welcome_text,
+            notification_type="welcome",
+        )
+        if result["success"]:
+            return f"Approved {approved.name} ({phone}). Welcome message sent."
+        return (
+            f"Approved {approved.name} ({phone}). "
+            f"Welcome message failed: {result['error']}"
+        )
     except Exception as e:
         return f"Approval failed. Error: {str(e)}"
 
