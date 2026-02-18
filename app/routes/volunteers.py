@@ -68,6 +68,8 @@ def delete_volunteer(volunteer_id: int, request: Request):
         "UPDATE signups SET dropped_at = CURRENT_TIMESTAMP WHERE volunteer_id = ? AND dropped_at IS NULL",
         (volunteer_id,),
     )
+    db.execute("DELETE FROM notifications WHERE volunteer_id = ?", (volunteer_id,))
+    db.execute("UPDATE volunteers SET approved_by = NULL WHERE approved_by = ?", (volunteer_id,))
     db.execute("DELETE FROM volunteers WHERE id = ?", (volunteer_id,))
     db.commit()
 
