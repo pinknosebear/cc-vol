@@ -1,6 +1,7 @@
 """Tests for DELETE /api/signups/{id}."""
 
 from fastapi.testclient import TestClient
+from unittest.mock import patch
 
 from app.main import app
 from app.db import get_db_connection, create_tables
@@ -72,3 +73,31 @@ def test_drop_signup_nonexistent():
     _ensure_db()
     resp = client.delete("/api/signups/99999")
     assert resp.status_code == 404
+
+
+@patch("app.routes.signups.send_message")
+def test_drop_signup_triggers_notification_when_within_7_days(mock_send):
+    _ensure_db()
+    test_conn.execute(
+        "INSERT OR IGNORE INTO volunteers (id, phone, name, is_coordinator) VALUES (?, ?, ?, ?)",
+        (1, "+15104566645", "Coordinator", 1),
+    )
+    test_conn.execute(
+        "INSERT OR IGNORE INTO volunteers (id, phone, name, is_coordinator) VALUES (?, ?, ?, ?)",
+        (11, "+15104566646", "Volunteer", 0),
+    )
+    test_conn.execute(
+        "INSERT OR IGNORE INTO shifts (id, date, shift_type, capacity) VALUES (?, date('now', '+1 day'), ?, ?)",
+        (111, "kakad", 1),
+    )
+    signup_id = test_conn.execute(
+        "INSERT INTO signups (volunteer_id, shift_id) VALUES (?, ?)",
+        (11, 111),
+    ).lastrowid
+    test_conn.commit()
+
+    mock_send.return_value = {"success": True, "notification_id": 1, "error": None}
+
+    resp = client.delete(f"/api/signups/{signup_id}")
+    assert resp.status_code == 204
+    assert mock_send.call_count == 1

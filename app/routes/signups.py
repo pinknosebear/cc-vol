@@ -26,6 +26,51 @@ class SignupRequest(BaseModel):
     shift_id: int
 
 
+def _recent_drop_alert_exists(db: sqlite3.Connection, coordinator_id: int, message: str) -> bool:
+    row = db.execute(
+        """
+        SELECT 1
+        FROM notifications
+        WHERE volunteer_id = ?
+          AND type = 'alert'
+          AND message = ?
+          AND sent_at IS NOT NULL
+          AND sent_at >= datetime('now', '-2 minutes')
+        LIMIT 1
+        """,
+        (coordinator_id, message),
+    ).fetchone()
+    return row is not None
+
+
+def _notify_coordinator_drop(
+    db: sqlite3.Connection,
+    volunteer_name: str,
+    volunteer_phone: str,
+    shift_date: str,
+    shift_type: str,
+) -> dict:
+    """Notify coordinator for drops within 7 days. Never raises on "no-op" cases."""
+    shift_day = date.fromisoformat(shift_date)
+    if (shift_day - date.today()).days > 7:
+        return {"success": False, "message": "Drop is more than 7 days away; no notification sent."}
+
+    coordinator_row = db.execute(
+        "SELECT id FROM volunteers WHERE is_coordinator = 1 AND removed_at IS NULL LIMIT 1"
+    ).fetchone()
+    if coordinator_row is None:
+        return {"success": False, "message": "No coordinator found"}
+
+    coordinator_id = coordinator_row["id"]
+    shift_label = "Kakad" if shift_type == "kakad" else "Robe"
+    message = f"{volunteer_name} ({volunteer_phone}) dropped {shift_label} shift on {shift_date}"
+
+    if _recent_drop_alert_exists(db, coordinator_id, message):
+        return {"success": True, "message": "Drop alert already sent recently"}
+
+    return send_message(db, coordinator_id, message, notification_type="alert")
+
+
 @router.post("", status_code=201)
 def post_signup(body: SignupRequest, db: sqlite3.Connection = Depends(_get_db)):
     # Look up volunteer by phone
@@ -70,12 +115,30 @@ def post_signup(body: SignupRequest, db: sqlite3.Connection = Depends(_get_db)):
 def delete_signup(signup_id: int, db: sqlite3.Connection = Depends(_get_db)):
     """Drop a signup (soft-delete by setting dropped_at)."""
     row = db.execute(
-        "SELECT * FROM signups WHERE id = ? AND dropped_at IS NULL", (signup_id,)
+        """
+        SELECT su.id, su.dropped_at, sh.date AS shift_date, sh.shift_type, v.name AS volunteer_name, v.phone AS volunteer_phone
+        FROM signups su
+        JOIN shifts sh ON sh.id = su.shift_id
+        JOIN volunteers v ON v.id = su.volunteer_id
+        WHERE su.id = ? AND su.dropped_at IS NULL
+        """,
+        (signup_id,),
     ).fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="Signup not found")
 
     drop_signup(db, signup_id)
+    try:
+        _notify_coordinator_drop(
+            db,
+            volunteer_name=row["volunteer_name"],
+            volunteer_phone=row["volunteer_phone"],
+            shift_date=row["shift_date"],
+            shift_type=row["shift_type"],
+        )
+    except Exception as exc:
+        # Notification failure should not block dropping the shift.
+        print(f"Drop notification failed for signup {signup_id}: {exc}")
     return Response(status_code=204)
 
 
@@ -88,33 +151,20 @@ class NotifyDropRequest(BaseModel):
 @router.post("/notify-drop", status_code=200)
 def notify_coordinator_drop(body: NotifyDropRequest, db: sqlite3.Connection = Depends(_get_db)):
     """Notify a coordinator via WhatsApp that a volunteer dropped a shift within a week."""
-    # Only notify if the shift is within 7 days
     try:
-      shift_day = date.fromisoformat(body.shift_date)
+        date.fromisoformat(body.shift_date)
     except ValueError:
-      raise HTTPException(status_code=422, detail="Invalid shift_date format. Use YYYY-MM-DD.")
-
-    if (shift_day - date.today()).days > 7:
-      return {"success": False, "message": "Drop is more than 7 days away; no notification sent."}
+        raise HTTPException(status_code=422, detail="Invalid shift_date format. Use YYYY-MM-DD.")
 
     # Look up volunteer
     volunteer = get_volunteer_by_phone(db, body.volunteer_phone)
     if volunteer is None:
-      raise HTTPException(status_code=404, detail="Volunteer not found")
+        raise HTTPException(status_code=404, detail="Volunteer not found")
 
-    # Find a coordinator
-    row = db.execute(
-        "SELECT id FROM volunteers WHERE is_coordinator = 1 LIMIT 1"
-    ).fetchone()
-    if row is None:
-        # No coordinator, just return success (notification not sent but not an error)
-        return {"success": False, "message": "No coordinator found"}
-
-    coordinator_id = row["id"]
-
-    # Send message
-    shift_label = "Kakad" if body.shift_type == "kakad" else "Robe"
-    message = f"{volunteer.name} ({body.volunteer_phone}) dropped {shift_label} shift on {body.shift_date}"
-
-    result = send_message(db, coordinator_id, message, notification_type="alert")
-    return result
+    return _notify_coordinator_drop(
+        db,
+        volunteer_name=volunteer.name,
+        volunteer_phone=volunteer.phone,
+        shift_date=body.shift_date,
+        shift_type=body.shift_type,
+    )

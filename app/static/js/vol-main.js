@@ -3,7 +3,6 @@ import {
   fetchMyShifts,
   createSignup,
   deleteSignup,
-  notifyCoordinatorDroppedShift,
 } from "./api.js";
 import { renderMonthPicker } from "./month-picker.js";
 import { renderCalendar } from "./calendar.js";
@@ -128,7 +127,7 @@ async function loadDayDetail(date) {
       const shiftPanel = document.createElement("div");
       renderShiftPanel(shiftPanel, shift, state.signedUpShiftIds, state.signedUpMap, {
         onSignUp: handleSignUp,
-        onDrop: (signupId) => handleDropWithNotification(signupId, shift.date, shift.type),
+        onDrop: handleDrop,
       });
       container.appendChild(shiftPanel);
     }
@@ -183,21 +182,8 @@ async function handleSignUp(shiftId) {
   }
 }
 
-async function handleDropWithNotification(signupId, shiftDate, shiftType) {
+async function handleDrop(signupId) {
   try {
-    const daysUntilShift = daysUntil(shiftDate);
-
-    // If within 7 days, notify coordinator via WhatsApp
-    if (daysUntilShift <= 7) {
-      try {
-        await notifyCoordinatorDroppedShift(state.phone, shiftDate, shiftType);
-      } catch (err) {
-        // Notification failed but allow drop to proceed
-        console.warn("Failed to notify coordinator:", err);
-      }
-    }
-
-    // Always delete the signup
     await deleteSignup(signupId);
 
     // Remove from tracking
@@ -215,14 +201,6 @@ async function handleDropWithNotification(signupId, shiftDate, shiftType) {
   } catch (err) {
     throw err;
   }
-}
-
-function daysUntil(dateStr) {
-  const shiftDate = new Date(dateStr + "T00:00:00");
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const diff = shiftDate - today;
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
 function renderMyShifts(shifts) {
@@ -258,7 +236,7 @@ function renderMyShifts(shifts) {
     const panel = document.createElement("div");
     renderShiftPanel(panel, shift, state.signedUpShiftIds, state.signedUpMap, {
       onSignUp: handleSignUp,
-      onDrop: (signupId) => handleDropWithNotification(signupId, shift.date, shift.type),
+      onDrop: handleDrop,
     });
     grid.appendChild(panel);
   }
