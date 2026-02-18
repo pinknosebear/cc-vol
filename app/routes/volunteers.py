@@ -64,10 +64,7 @@ def delete_volunteer(volunteer_id: int, request: Request):
     row = db.execute("SELECT id FROM volunteers WHERE id = ?", (volunteer_id,)).fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="Volunteer not found")
-    db.execute(
-        "UPDATE signups SET dropped_at = CURRENT_TIMESTAMP WHERE volunteer_id = ? AND dropped_at IS NULL",
-        (volunteer_id,),
-    )
+    db.execute("DELETE FROM signups WHERE volunteer_id = ?", (volunteer_id,))
     db.execute("DELETE FROM notifications WHERE volunteer_id = ?", (volunteer_id,))
     db.execute("UPDATE volunteers SET approved_by = NULL WHERE approved_by = ?", (volunteer_id,))
     db.execute("DELETE FROM volunteers WHERE id = ?", (volunteer_id,))
