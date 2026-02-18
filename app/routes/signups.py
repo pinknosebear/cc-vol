@@ -109,5 +109,5 @@ def notify_coordinator_drop(body: NotifyDropRequest, db: sqlite3.Connection = De
     shift_label = "Kakad" if body.shift_type == "kakad" else "Robe"
     message = f"{volunteer.name} ({body.volunteer_phone}) dropped {shift_label} shift on {body.shift_date}"
 
-    result = send_message(db, coordinator_id, message, notification_type="drop_alert")
+    result = send_message(db, coordinator_id, message, notification_type="alert")
     return result
