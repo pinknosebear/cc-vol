@@ -128,7 +128,7 @@ async function loadDayDetail(date) {
       const shiftPanel = document.createElement("div");
       renderShiftPanel(shiftPanel, shift, state.signedUpShiftIds, state.signedUpMap, {
         onSignUp: handleSignUp,
-        onDrop: handleDrop,
+        onDrop: (signupId) => handleDropWithNotification(signupId, shift.date, shift.type),
       });
       container.appendChild(shiftPanel);
     }
@@ -178,25 +178,6 @@ async function handleSignUp(shiftId) {
     state.signedUpMap.set(shiftId, signup.id);
     // Refresh calendar to update badge
     loadCalendar();
-  } catch (err) {
-    throw err;
-  }
-}
-
-async function handleDrop(signupId) {
-  try {
-    await deleteSignup(signupId);
-    // Remove from tracking
-    for (const [shiftId, id] of state.signedUpMap.entries()) {
-      if (id === signupId) {
-        state.signedUpShiftIds.delete(shiftId);
-        state.signedUpMap.delete(shiftId);
-        break;
-      }
-    }
-    // Refresh both calendar and my shifts
-    if (activeTab === "calendar") loadCalendar();
-    if (activeTab === "my-shifts") loadMyShifts();
   } catch (err) {
     throw err;
   }
