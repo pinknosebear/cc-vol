@@ -4,9 +4,9 @@
  * Render volunteer list with add form.
  * @param {HTMLElement} container
  * @param {Array} volunteers - from GET /api/volunteers
- * @param {{ onAdd: function }} opts - onAdd(phone, name, isCoordinator)
+ * @param {{ onAdd: function, onRemove: function }} opts
  */
-export function renderVolunteerList(container, volunteers, { onAdd }) {
+export function renderVolunteerList(container, volunteers, { onAdd, onRemove }) {
   container.innerHTML = "";
 
   const card = document.createElement("div");
@@ -30,6 +30,7 @@ export function renderVolunteerList(container, volunteers, { onAdd }) {
       <th class="text-left py-2 px-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Name</th>
       <th class="text-left py-2 px-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Phone</th>
       <th class="text-left py-2 px-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Role</th>
+      <th class="py-2 px-3"></th>
     </tr>`;
   table.appendChild(thead);
 
@@ -55,7 +56,27 @@ export function renderVolunteerList(container, volunteers, { onAdd }) {
     roleBadge.textContent = vol.is_coordinator ? "Coordinator" : "Volunteer";
     roleTd.appendChild(roleBadge);
 
-    tr.append(nameTd, phoneTd, roleTd);
+    const actionTd = document.createElement("td");
+    actionTd.className = "py-2.5 px-3 text-right";
+    const removeBtn = document.createElement("button");
+    removeBtn.textContent = "Remove";
+    removeBtn.className = "text-xs text-red-500 hover:text-red-700 hover:underline cursor-pointer";
+    removeBtn.addEventListener("click", async () => {
+      if (!confirm(`Remove ${vol.name} from the volunteer list?`)) return;
+      removeBtn.disabled = true;
+      removeBtn.textContent = "Removing…";
+      try {
+        await onRemove(vol.phone);
+        tr.remove();
+      } catch (err) {
+        removeBtn.disabled = false;
+        removeBtn.textContent = "Remove";
+        alert(`Could not remove volunteer: ${err.message}`);
+      }
+    });
+    actionTd.appendChild(removeBtn);
+
+    tr.append(nameTd, phoneTd, roleTd, actionTd);
     tbody.appendChild(tr);
   }
   table.appendChild(tbody);

@@ -1,4 +1,4 @@
-import { fetchShifts, fetchDayDetail, fetchGaps, fetchAvailable, fetchVolunteers, createVolunteer, seedMonth } from "./api.js";
+import { fetchShifts, fetchDayDetail, fetchGaps, fetchAvailable, fetchVolunteers, createVolunteer, removeVolunteer, seedMonth } from "./api.js";
 import { renderMonthPicker } from "./month-picker.js";
 import { renderCalendar } from "./calendar.js";
 import { renderDayDetail } from "./day-detail.js";
@@ -95,6 +95,9 @@ async function loadVolunteers() {
       onAdd: async (phone, name, isCoord) => {
         await createVolunteer(phone, name, isCoord);
         loadVolunteers(); // Refresh list
+      },
+      onRemove: async (phone) => {
+        await removeVolunteer(phone);
       },
     });
 
