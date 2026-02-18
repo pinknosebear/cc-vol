@@ -15,9 +15,10 @@ RuleResult = namedtuple("RuleResult", ["allowed", "reason"])
 
 
 class SignupPhase(Enum):
-    PHASE_1 = "phase_1"
-    PHASE_2 = "phase_2"
-    MID_MONTH = "mid_month"
+    BLOCKED = "blocked"    # 14+ days before month: signups not open yet
+    PHASE_1 = "phase_1"   # 7-13 days before: 2K + 4R + 1Thu, max 6
+    PHASE_2 = "phase_2"   # 1-6 days before: running total raised to 8
+    MID_MONTH = "mid_month"  # on/after month start: capacity only
 
 
 # ---------------------------------------------------------------------------
@@ -27,14 +28,17 @@ class SignupPhase(Enum):
 def get_signup_phase(today: date, shift_month_start: date) -> SignupPhase:
     """Determine signup phase based on days before the shift month starts.
 
-    - 14+ days before month start → PHASE_1
-    - 7-13 days before → PHASE_2
-    - <7 days before OR on/after month start → MID_MONTH
+    - 14+ days before month start → BLOCKED (signups not open yet)
+    - 7-13 days before → PHASE_1 (2K + 4R + 1Thu, max 6)
+    - 1-6 days before → PHASE_2 (running total raised to 8)
+    - on/after month start → MID_MONTH (capacity only)
     """
     days_before = (shift_month_start - today).days
     if days_before >= 14:
-        return SignupPhase.PHASE_1
+        return SignupPhase.BLOCKED
     if days_before >= 7:
+        return SignupPhase.PHASE_1
+    if days_before > 0:
         return SignupPhase.PHASE_2
     return SignupPhase.MID_MONTH
 
@@ -75,13 +79,6 @@ def check_phase1_total(total_count: int, max: int = 6) -> RuleResult:
 # Phase 2 rules
 # ---------------------------------------------------------------------------
 
-def check_phase2_additional(phase2_count: int, max: int = 2) -> RuleResult:
-    """Check that additional Phase 2 signups have not reached the limit."""
-    if phase2_count >= max:
-        return RuleResult(False, f"Phase 2 additional limit reached ({phase2_count}/{max})")
-    return RuleResult(True, "")
-
-
 def check_running_total(total_count: int, max: int = 8) -> RuleResult:
     """Check that the running total across phases has not reached the limit."""
     if total_count >= max:
@@ -112,5 +109,5 @@ def get_applicable_rules(phase: SignupPhase) -> list:
     if phase == SignupPhase.PHASE_1:
         return [check_kakad_limit, check_robe_limit, check_thursday_limit, check_phase1_total]
     if phase == SignupPhase.PHASE_2:
-        return [check_phase2_additional, check_running_total]
+        return [check_running_total]
     return []

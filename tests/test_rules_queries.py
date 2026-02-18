@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from datetime import date, timedelta
+from datetime import date
 from typing import Optional
 
 from app.rules.queries import (
@@ -11,7 +11,6 @@ from app.rules.queries import (
     get_robe_count,
     get_total_count,
     get_thursday_count,
-    get_phase2_count,
     get_shift_signup_count,
     get_shift_capacity,
 )
@@ -150,34 +149,3 @@ def test_shift_capacity_not_found(setup):
         get_shift_capacity(setup["db"], 9999)
 
 
-def test_phase2_count(setup):
-    """Signups created during Phase 2 window (7-13 days before month start)."""
-    db = setup["db"]
-    vol_id = setup["vol_id"]
-
-    # Phase 2 for March 2026: signed_up_at between Feb 16 and Feb 22 inclusive
-    # Create shifts in March
-    m1 = _insert_shift(db, "2026-03-02", "kakad", capacity=3)
-    m2 = _insert_shift(db, "2026-03-03", "robe", capacity=3)
-
-    # Signup during Phase 2 window
-    _insert_signup(db, vol_id, m1, signed_up_at="2026-02-18 10:00:00")
-    _insert_signup(db, vol_id, m2, signed_up_at="2026-02-20 10:00:00")
-
-    assert get_phase2_count(db, vol_id, 2026, 3) == 2
-
-
-def test_phase2_count_excludes_outside_window(setup):
-    """Signups outside Phase 2 window should not be counted."""
-    db = setup["db"]
-    vol3 = _insert_volunteer(db, "+3000", "Vol Three")
-
-    m1 = _insert_shift(db, "2026-03-05", "kakad", capacity=3)
-    m2 = _insert_shift(db, "2026-03-06", "robe", capacity=3)
-
-    # Phase 1 signup (too early — 15 days before)
-    _insert_signup(db, vol3, m1, signed_up_at="2026-02-14 10:00:00")
-    # Mid-month signup (too late — 5 days before)
-    _insert_signup(db, vol3, m2, signed_up_at="2026-02-24 10:00:00")
-
-    assert get_phase2_count(db, vol3, 2026, 3) == 0

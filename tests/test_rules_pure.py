@@ -8,7 +8,6 @@ from app.rules.pure import (
     check_capacity,
     check_kakad_limit,
     check_phase1_total,
-    check_phase2_additional,
     check_robe_limit,
     check_running_total,
     check_thursday_limit,
@@ -22,34 +21,46 @@ from app.rules.pure import (
 # ---------------------------------------------------------------------------
 
 class TestGetSignupPhase:
-    def test_15_days_before_is_phase1(self):
+    # Shift month = March 2026, month_start = 2026-03-01
+
+    def test_15_days_before_is_blocked(self):
         month_start = date(2026, 3, 1)
         today = date(2026, 2, 14)  # 15 days before
-        assert get_signup_phase(today, month_start) == SignupPhase.PHASE_1
+        assert get_signup_phase(today, month_start) == SignupPhase.BLOCKED
 
-    def test_exactly_14_days_before_is_phase1(self):
+    def test_exactly_14_days_before_is_blocked(self):
         month_start = date(2026, 3, 1)
         today = date(2026, 2, 15)  # 14 days before
+        assert get_signup_phase(today, month_start) == SignupPhase.BLOCKED
+
+    def test_13_days_before_is_phase1(self):
+        month_start = date(2026, 3, 1)
+        today = date(2026, 2, 16)  # 13 days before
         assert get_signup_phase(today, month_start) == SignupPhase.PHASE_1
 
-    def test_7_days_before_is_phase2(self):
+    def test_7_days_before_is_phase1(self):
         month_start = date(2026, 3, 1)
-        today = date(2026, 2, 22)  # 7 days before
-        assert get_signup_phase(today, month_start) == SignupPhase.PHASE_2
+        today = date(2026, 2, 22)  # exactly 7 days before
+        assert get_signup_phase(today, month_start) == SignupPhase.PHASE_1
 
-    def test_exactly_7_days_before_is_phase2(self):
-        month_start = date(2026, 3, 1)
-        today = date(2026, 2, 22)  # exactly 7 days
-        assert get_signup_phase(today, month_start) == SignupPhase.PHASE_2
-
-    def test_6_days_before_is_mid_month(self):
+    def test_6_days_before_is_phase2(self):
         month_start = date(2026, 3, 1)
         today = date(2026, 2, 23)  # 6 days before
-        assert get_signup_phase(today, month_start) == SignupPhase.MID_MONTH
+        assert get_signup_phase(today, month_start) == SignupPhase.PHASE_2
+
+    def test_1_day_before_is_phase2(self):
+        month_start = date(2026, 3, 1)
+        today = date(2026, 2, 28)  # 1 day before
+        assert get_signup_phase(today, month_start) == SignupPhase.PHASE_2
 
     def test_day_of_month_start_is_mid_month(self):
         month_start = date(2026, 3, 1)
         today = date(2026, 3, 1)  # day of
+        assert get_signup_phase(today, month_start) == SignupPhase.MID_MONTH
+
+    def test_after_month_start_is_mid_month(self):
+        month_start = date(2026, 3, 1)
+        today = date(2026, 3, 10)
         assert get_signup_phase(today, month_start) == SignupPhase.MID_MONTH
 
 
@@ -100,15 +111,6 @@ class TestPhase1Rules:
 # ---------------------------------------------------------------------------
 
 class TestPhase2Rules:
-    def test_phase2_additional_under_limit_ok(self):
-        result = check_phase2_additional(1, max=2)
-        assert result == RuleResult(True, "")
-
-    def test_phase2_additional_at_limit_rejected(self):
-        result = check_phase2_additional(2, max=2)
-        assert result.allowed is False
-        assert "Phase 2 additional limit" in result.reason
-
     def test_running_total_under_limit_ok(self):
         result = check_running_total(7, max=8)
         assert result == RuleResult(True, "")
@@ -148,6 +150,10 @@ class TestCapacity:
 # ---------------------------------------------------------------------------
 
 class TestGetApplicableRules:
+    def test_blocked_returns_empty(self):
+        rules = get_applicable_rules(SignupPhase.BLOCKED)
+        assert rules == []
+
     def test_phase1_returns_4_rules(self):
         rules = get_applicable_rules(SignupPhase.PHASE_1)
         assert len(rules) == 4
@@ -156,10 +162,9 @@ class TestGetApplicableRules:
         assert check_thursday_limit in rules
         assert check_phase1_total in rules
 
-    def test_phase2_returns_2_rules(self):
+    def test_phase2_returns_1_rule(self):
         rules = get_applicable_rules(SignupPhase.PHASE_2)
-        assert len(rules) == 2
-        assert check_phase2_additional in rules
+        assert len(rules) == 1
         assert check_running_total in rules
 
     def test_mid_month_returns_empty(self):

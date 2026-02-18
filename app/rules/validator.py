@@ -15,7 +15,6 @@ from app.rules.pure import (
     check_capacity,
     check_kakad_limit,
     check_phase1_total,
-    check_phase2_additional,
     check_robe_limit,
     check_running_total,
     check_thursday_limit,
@@ -23,7 +22,6 @@ from app.rules.pure import (
 )
 from app.rules.queries import (
     get_kakad_count,
-    get_phase2_count,
     get_robe_count,
     get_shift_capacity,
     get_shift_signup_count,
@@ -82,6 +80,10 @@ def validate_signup(
 
     violations: list[RuleResult] = []
 
+    # --- Signups not open yet ---
+    if phase == SignupPhase.BLOCKED:
+        return [RuleResult(allowed=False, reason="Signups for this month are not open yet")]
+
     # --- Capacity is always checked ---
     shift_signups = get_shift_signup_count(db, shift_id)
     cap_result = check_capacity(shift_signups, capacity)
@@ -111,20 +113,14 @@ def validate_signup(
             if not r.allowed:
                 violations.append(r)
 
-        # Thursday limit only when shift is on a Thursday
         if shift_date.weekday() == 3:  # 3 = Thursday
             thurs = get_thursday_count(db, volunteer_id, year, month)
             r = check_thursday_limit(thurs)
             if not r.allowed:
                 violations.append(r)
 
-    # --- Phase 2 rules ---
+    # --- Phase 2 rules: ceiling raised to 8 total ---
     if phase == SignupPhase.PHASE_2:
-        phase2 = get_phase2_count(db, volunteer_id, year, month)
-        r = check_phase2_additional(phase2)
-        if not r.allowed:
-            violations.append(r)
-
         total = get_total_count(db, volunteer_id, year, month)
         r = check_running_total(total)
         if not r.allowed:
