@@ -34,7 +34,9 @@ def post_signup(body: SignupRequest, db: sqlite3.Connection = Depends(_get_db)):
         raise HTTPException(status_code=404, detail="Volunteer not found")
 
     # Look up shift by id
-    row = db.execute("SELECT id FROM shifts WHERE id = ?", (body.shift_id,)).fetchone()
+    row = db.execute(
+        "SELECT id, shift_type, date FROM shifts WHERE id = ?", (body.shift_id,)
+    ).fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="Shift not found")
 
