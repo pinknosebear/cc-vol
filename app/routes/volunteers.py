@@ -5,10 +5,10 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
-from app.models.volunteer import get_volunteer_by_phone, create_volunteer, VolunteerCreate, list_volunteers
+from app.models.volunteer import get_volunteer_by_phone, create_volunteer, VolunteerCreate, list_volunteers, remove_volunteer
 from app.models.signup import get_signups_by_volunteer
 from app.models.shift import Shift
 
@@ -55,6 +55,16 @@ def get_volunteers(request: Request, status: Optional[str] = Query(None)):
     filter_status = status if status is not None else "approved"
     vols = list_volunteers(db, status=filter_status)
     return [{"id": v.id, "phone": v.phone, "name": v.name, "is_coordinator": v.is_coordinator, "status": v.status} for v in vols]
+
+
+@router.delete("/{phone}", status_code=204)
+def delete_volunteer(phone: str, request: Request):
+    """Remove a registered volunteer (soft-delete)."""
+    db = request.app.state.db
+    vol = remove_volunteer(db, phone)
+    if vol is None:
+        raise HTTPException(status_code=404, detail="Volunteer not found")
+    return Response(status_code=204)
 
 
 @router.get("/{phone}/shifts", response_model=list[ShiftDetail])
