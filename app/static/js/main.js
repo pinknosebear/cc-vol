@@ -3,7 +3,7 @@ import { renderMonthPicker } from "./month-picker.js";
 import { renderCalendar } from "./calendar.js";
 import { renderDayDetail } from "./day-detail.js";
 import { renderGaps } from "./gaps.js";
-import { renderVolunteerList } from "./volunteers.js";
+import { renderVolunteerList, renderSeedControls } from "./volunteers.js";
 
 // State
 const state = {
@@ -59,7 +59,6 @@ async function loadCalendar() {
   try {
     const shifts = await fetchShifts(monthStr());
     renderCalendar(calendarEl, shifts, {
-      selectedDate: state.selectedDate,
       onDayClick: (date) => loadDayDetail(date),
     });
   } catch (err) {
@@ -69,7 +68,6 @@ async function loadCalendar() {
 
 async function loadDayDetail(date) {
   state.selectedDate = date;
-  loadCalendar();
   try {
     const [dayData, available] = await Promise.all([
       fetchDayDetail(date),
@@ -106,6 +104,20 @@ async function loadVolunteers() {
         await removeVolunteer(phone);
       },
     });
+
+    // Seed controls below volunteers
+    const seedContainer = document.createElement("div");
+    seedContainer.id = "seed-controls";
+    volunteersEl.appendChild(seedContainer);
+    renderSeedControls(seedContainer, {
+      currentYear: state.year,
+      currentMonth: state.month,
+      onSeed: async (year, month) => {
+        await seedMonth(year, month);
+        // Refresh calendar if on that view
+        if (activeTab === "calendar") loadCalendar();
+      },
+    });
   } catch (err) {
     volunteersEl.innerHTML = `<div class="card"><p>Error loading volunteers: ${err.message}</p></div>`;
   }
@@ -116,19 +128,9 @@ function renderPicker() {
   renderMonthPicker(monthPickerEl, {
     year: state.year,
     month: state.month,
-    onSeed: async (year, month) => {
-      try {
-        await seedMonth(year, month);
-        if (activeTab === "calendar") loadCalendar();
-        if (activeTab === "gaps") loadGaps();
-      } catch (err) {
-        alert(`Failed to seed shifts: ${err.message}`);
-      }
-    },
     onChange: (newYear, newMonth) => {
       state.year = newYear;
       state.month = newMonth;
-      state.selectedDate = null;
       renderPicker();
       if (activeTab === "calendar") loadCalendar();
       if (activeTab === "gaps") loadGaps();
