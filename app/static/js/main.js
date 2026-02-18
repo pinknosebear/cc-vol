@@ -100,6 +100,9 @@ async function loadVolunteers() {
         await deleteVolunteer(id);
         loadVolunteers();
       },
+      onRemove: async (phone) => {
+        await removeVolunteer(phone);
+      },
     });
 
     // Seed controls below volunteers

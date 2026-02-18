@@ -5,10 +5,10 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
-from app.models.volunteer import get_volunteer_by_phone, create_volunteer, VolunteerCreate, list_volunteers
+from app.models.volunteer import get_volunteer_by_phone, create_volunteer, VolunteerCreate, list_volunteers, remove_volunteer
 from app.models.signup import get_signups_by_volunteer
 from app.models.shift import Shift
 

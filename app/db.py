@@ -27,6 +27,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
             requested_at TIMESTAMP,
             approved_at TIMESTAMP,
             approved_by INTEGER,
+            removed_at TIMESTAMP,
             FOREIGN KEY (approved_by) REFERENCES volunteers(id)
         );
 

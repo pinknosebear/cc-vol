@@ -4,7 +4,7 @@
  * Render volunteer list with add form.
  * @param {HTMLElement} container
  * @param {Array} volunteers - from GET /api/volunteers
- * @param {{ onAdd: function }} opts - onAdd(phone, name, isCoordinator)
+ * @param {{ onAdd: function, onRemove: function }} opts
  */
 export function renderVolunteerList(container, volunteers, { onAdd, onDelete }) {
   container.innerHTML = "";
