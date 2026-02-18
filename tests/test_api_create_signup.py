@@ -1,6 +1,8 @@
 """Tests for POST /api/signups endpoint."""
 
+import atexit
 from datetime import date
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -17,6 +19,12 @@ create_tables(test_conn)
 app.state.db = test_conn
 
 client = TestClient(app)
+_send_patcher = patch(
+    "app.routes.signups.send_message",
+    return_value={"success": True, "notification_id": 1, "error": None},
+)
+_send_patcher.start()
+atexit.register(_send_patcher.stop)
 
 
 def _reset_db():

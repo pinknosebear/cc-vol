@@ -54,6 +54,11 @@ def post_signup(body: SignupRequest, db: sqlite3.Connection = Depends(_get_db)):
 
     # Create signup
     signup = create_signup(db, SignupCreate(volunteer_id=volunteer.id, shift_id=body.shift_id))
+
+    shift_label = "Kakad" if row["shift_type"] == "kakad" else "Robe"
+    message = f"Signup confirmed: {shift_label} shift on {row['date']}."
+    send_message(db, volunteer.id, message, notification_type="alert")
+
     return signup.model_dump()
 
 
