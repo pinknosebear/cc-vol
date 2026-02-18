@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import sqlite3
 
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 
@@ -79,10 +81,19 @@ class NotifyDropRequest(BaseModel):
 @router.post("/notify-drop", status_code=200)
 def notify_coordinator_drop(body: NotifyDropRequest, db: sqlite3.Connection = Depends(_get_db)):
     """Notify a coordinator via WhatsApp that a volunteer dropped a shift within a week."""
+    # Only notify if the shift is within 7 days
+    try:
+      shift_day = date.fromisoformat(body.shift_date)
+    except ValueError:
+      raise HTTPException(status_code=422, detail="Invalid shift_date format. Use YYYY-MM-DD.")
+
+    if (shift_day - date.today()).days > 7:
+      return {"success": False, "message": "Drop is more than 7 days away; no notification sent."}
+
     # Look up volunteer
     volunteer = get_volunteer_by_phone(db, body.volunteer_phone)
     if volunteer is None:
-        raise HTTPException(status_code=404, detail="Volunteer not found")
+      raise HTTPException(status_code=404, detail="Volunteer not found")
 
     # Find a coordinator
     row = db.execute(
@@ -98,5 +109,5 @@ def notify_coordinator_drop(body: NotifyDropRequest, db: sqlite3.Connection = De
     shift_label = "Kakad" if body.shift_type == "kakad" else "Robe"
     message = f"{volunteer.name} ({body.volunteer_phone}) dropped {shift_label} shift on {body.shift_date}"
 
-    result = send_message(db, coordinator_id, message, notification_type="drop_alert")
+    result = send_message(db, coordinator_id, message, notification_type="alert")
     return result
