@@ -10,6 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const FASTAPI_URL = process.env.FASTAPI_URL || "http://localhost:8000";
 const PORT = parseInt(process.env.PORT, 10) || 3000;
+const OUTBOUND_ONLY = (process.env.WA_OUTBOUND_ONLY ?? "true").toLowerCase() === "true";
 
 const logger = pino({ level: "warn" });
 
@@ -70,6 +71,7 @@ async function startWhatsApp() {
 
   sock.ev.on("messages.upsert", async ({ messages, type }) => {
     if (type !== "notify") return;
+    if (OUTBOUND_ONLY) return;
 
     for (const msg of messages) {
       // Skip messages the bot itself sent (prevents reply loops)
@@ -84,13 +86,7 @@ async function startWhatsApp() {
       if (!text) continue;
 
       const jid = msg.key.remoteJid;
-      if (jid.endsWith("@lid")) {
-        // WhatsApp LID accounts don't expose phone numbers — can't identify the sender
-        await sock.sendMessage(jid, {
-          text: "Sorry, your WhatsApp account uses a privacy setting that hides your phone number. Please ask a coordinator to add you manually.",
-        });
-        continue;
-      }
+      if (jid.endsWith("@lid")) continue;
       const phone = jid.replace(/@s\.whatsapp\.net$/, "");
 
       try {
