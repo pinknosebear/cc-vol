@@ -12,6 +12,7 @@ from app.routes.shifts import router as shifts_router
 from app.routes.signups import router as signups_router
 from app.routes.volunteers import router as volunteers_router
 from app.routes.wa_incoming import router as wa_incoming_router
+from app.scheduler import start_scheduler, shutdown_scheduler
 
 app = FastAPI(title="cc-vol", description="Volunteer Scheduling System")
 
@@ -36,11 +37,13 @@ def startup():
     conn = get_db_connection(db_path)
     create_tables(conn)
     app.state.db = conn
+    app.state.scheduler = start_scheduler()
 
 
 @app.on_event("shutdown")
 def shutdown():
     app.state.db.close()
+    shutdown_scheduler(app.state.scheduler)
 
 
 def get_db(request: Request):
