@@ -12,21 +12,28 @@ export function renderShiftPanel(container, shift, signedUpShiftIds, signedUpMap
   container.innerHTML = "";
 
   const card = document.createElement("div");
-  card.className = "shift-card";
+  card.className = "bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col gap-2";
 
-  // Date and type header
+  // Type badge + capacity
   const header = document.createElement("div");
-  header.className = "shift-card-header";
-  const typeLabel = shift.type === "kakad" ? "Kakad" : "Robe";
-  header.innerHTML = `
-    <strong>${typeLabel}</strong>
-    <span class="shift-capacity">${shift.signup_count}/${shift.capacity}</span>
-  `;
+  header.className = "flex items-center justify-between";
+
+  const typeBadge = document.createElement("span");
+  const isKakad = shift.type === "kakad";
+  typeBadge.className = `text-xs font-semibold px-2 py-0.5 rounded-full text-white ${isKakad ? "bg-amber-500" : "bg-violet-500"}`;
+  typeBadge.textContent = isKakad ? "Kakad" : "Robe";
+
+  const capacityEl = document.createElement("span");
+  capacityEl.className = "text-xs text-gray-500";
+  capacityEl.textContent = `${shift.signup_count}/${shift.capacity}`;
+
+  header.appendChild(typeBadge);
+  header.appendChild(capacityEl);
   card.appendChild(header);
 
   // Date
   const dateEl = document.createElement("div");
-  dateEl.className = "shift-date";
+  dateEl.className = "text-sm font-medium text-gray-700";
   dateEl.textContent = formatDate(shift.date);
   card.appendChild(dateEl);
 
@@ -36,7 +43,7 @@ export function renderShiftPanel(container, shift, signedUpShiftIds, signedUpMap
 
   if (isSignedUp) {
     const dropBtn = document.createElement("button");
-    dropBtn.className = "btn btn--drop";
+    dropBtn.className = "mt-1 w-full py-1.5 rounded-lg text-sm font-medium text-white bg-red-500 hover:bg-red-600 transition-colors";
     dropBtn.textContent = "Drop Shift";
     const signupId = signedUpMap.get(shift.id);
     dropBtn.addEventListener("click", async () => {
@@ -49,7 +56,7 @@ export function renderShiftPanel(container, shift, signedUpShiftIds, signedUpMap
     card.appendChild(dropBtn);
   } else if (hasCapacity) {
     const signupBtn = document.createElement("button");
-    signupBtn.className = "btn btn--primary";
+    signupBtn.className = "mt-1 w-full py-1.5 rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors";
     signupBtn.textContent = "Sign Up";
     signupBtn.addEventListener("click", async () => {
       try {
@@ -61,7 +68,7 @@ export function renderShiftPanel(container, shift, signedUpShiftIds, signedUpMap
     card.appendChild(signupBtn);
   } else {
     const fullEl = document.createElement("div");
-    fullEl.className = "shift-full";
+    fullEl.className = "mt-1 text-center text-xs text-gray-400 italic";
     fullEl.textContent = "Shift Full";
     card.appendChild(fullEl);
   }
