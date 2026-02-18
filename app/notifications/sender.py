@@ -4,7 +4,7 @@ from typing import Optional
 import httpx
 
 from app.models.notification import NotificationCreate, create_notification, mark_sent, mark_error
-from app.models.volunteer import get_volunteer_by_phone, Volunteer
+from app.models.volunteer import get_volunteer_by_phone, Volunteer, normalize_phone
 
 
 def send_message(
@@ -43,7 +43,7 @@ def send_message(
     endpoint = f"{wa_bridge_url}/send"
 
     payload = {
-        "phone": volunteer.phone,
+        "phone": normalize_phone(volunteer.phone),
         "message": message,
     }
 

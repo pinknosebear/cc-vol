@@ -8,7 +8,13 @@ from datetime import date, timedelta
 
 from app.models.shift import ShiftCreate, Shift, create_shift, get_robe_capacity, get_shifts_by_month
 from app.models.signup import SignupCreate, Signup, create_signup, drop_signup, get_signups_by_volunteer
-from app.models.volunteer import Volunteer, VolunteerCreate, create_volunteer, get_volunteer_by_phone
+from app.models.volunteer import (
+    Volunteer,
+    VolunteerCreate,
+    create_volunteer,
+    get_volunteer_by_phone,
+    normalize_phone,
+)
 from app.rules.validator import validate_signup
 
 
@@ -141,8 +147,17 @@ def seed_signups(db: sqlite3.Connection, year: int, month: int) -> dict[str, lis
     seed_month(db, year, month)
     volunteers = seed_volunteers(db)
 
-    # Build a lookup by phone
-    vol_by_phone: dict[str, Volunteer] = {v.phone: v for v in volunteers}
+    # Build lookup aliases so seed scenarios remain stable across phone formats.
+    vol_by_phone: dict[str, Volunteer] = {}
+    for v in volunteers:
+        vol_by_phone[v.phone] = v
+        canonical = normalize_phone(v.phone)
+        vol_by_phone[canonical] = v
+        digits = "".join(ch for ch in v.phone if ch.isdigit())
+        if digits:
+            vol_by_phone[digits] = v
+            if len(digits) == 11 and digits.startswith("1"):
+                vol_by_phone[digits[1:]] = v
 
     # Check idempotency: if any signups already exist for this month, return them
     month_str = f"{year:04d}-{month:02d}"

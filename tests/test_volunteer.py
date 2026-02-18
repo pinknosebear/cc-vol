@@ -8,6 +8,7 @@ from app.models.volunteer import (
     create_volunteer,
     get_volunteer_by_phone,
     list_volunteers,
+    normalize_phone,
 )
 
 
@@ -22,6 +23,12 @@ def test_create_volunteer(db):
     assert vol.created_at is not None
 
 
+def test_create_volunteer_normalizes_10_digit(db):
+    data = VolunteerCreate(phone="5104566645", name="Alice")
+    vol = create_volunteer(db, data)
+    assert vol.phone == "+15104566645"
+
+
 def test_get_volunteer_by_phone(db):
     data = VolunteerCreate(phone="+1111111111", name="Bob")
     create_volunteer(db, data)
@@ -30,6 +37,24 @@ def test_get_volunteer_by_phone(db):
     assert found is not None
     assert found.name == "Bob"
     assert found.phone == "+1111111111"
+
+
+def test_get_volunteer_by_phone_matches_legacy_plain(db):
+    db.execute(
+        "INSERT INTO volunteers (phone, name, is_coordinator, status) VALUES (?, ?, ?, ?)",
+        ("5104566645", "Legacy Bob", False, "approved"),
+    )
+    db.commit()
+
+    found = get_volunteer_by_phone(db, "+15104566645")
+    assert found is not None
+    assert found.name == "Legacy Bob"
+    assert found.phone == "5104566645"
+
+
+def test_normalize_phone_with_default_area_code(monkeypatch):
+    monkeypatch.setenv("DEFAULT_AREA_CODE", "510")
+    assert normalize_phone("4566645") == "+15104566645"
 
 
 def test_get_volunteer_by_phone_not_found(db):

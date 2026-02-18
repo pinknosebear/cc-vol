@@ -57,6 +57,23 @@ class TestSendMessage:
         assert call_args[1]["json"]["message"] == "Test message"
 
     @patch("app.notifications.sender.httpx.post")
+    def test_send_message_normalizes_plain_10_digit_phone(self, mock_post, db):
+        vol_data = VolunteerCreate(phone="5104566645", name="Plain Phone Volunteer")
+        volunteer = create_volunteer(db, vol_data)
+        mock_post.return_value = MagicMock(status_code=200)
+
+        result = send_message(
+            db,
+            volunteer_id=volunteer.id,
+            message="Test message",
+            notification_type="alert",
+        )
+
+        assert result["success"] is True
+        call_args = mock_post.call_args
+        assert call_args[1]["json"]["phone"] == "+15104566645"
+
+    @patch("app.notifications.sender.httpx.post")
     def test_send_message_failure(self, mock_post, db):
         """Test message sending failure."""
         # Create volunteer
