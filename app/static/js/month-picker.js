@@ -13,11 +13,11 @@ export function renderMonthPicker(container, { year, month, onChange }) {
   container.innerHTML = "";
 
   const wrap = document.createElement("div");
-  wrap.className = "month-picker";
+  wrap.className = "flex items-center gap-4 justify-center py-2";
 
   const prev = document.createElement("button");
-  prev.className = "btn btn--secondary";
-  prev.textContent = "\u25C0";
+  prev.className = "w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 bg-white hover:bg-gray-50 transition-colors cursor-pointer text-gray-500 text-xs";
+  prev.textContent = "◀";
   prev.addEventListener("click", () => {
     let newMonth = month - 1;
     let newYear = year;
@@ -26,17 +26,14 @@ export function renderMonthPicker(container, { year, month, onChange }) {
   });
 
   const label = document.createElement("span");
-  label.className = "month-label";
+  const today = new Date();
+  const isCurrent = year === today.getFullYear() && month === today.getMonth() + 1;
+  label.className = `text-lg font-semibold min-w-[160px] text-center ${isCurrent ? "text-indigo-600" : "text-gray-800"}`;
   label.textContent = `${MONTHS[month - 1]} ${year}`;
 
-  const today = new Date();
-  if (year === today.getFullYear() && month === today.getMonth() + 1) {
-    label.style.color = "var(--color-primary)";
-  }
-
   const next = document.createElement("button");
-  next.className = "btn btn--secondary";
-  next.textContent = "\u25B6";
+  next.className = "w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 bg-white hover:bg-gray-50 transition-colors cursor-pointer text-gray-500 text-xs";
+  next.textContent = "▶";
   next.addEventListener("click", () => {
     let newMonth = month + 1;
     let newYear = year;

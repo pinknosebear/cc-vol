@@ -17,7 +17,7 @@ export function renderCalendar(container, shifts, { onDayClick }) {
   container.innerHTML = "";
 
   if (!shifts || shifts.length === 0) {
-    container.innerHTML = '<div class="card"><p>No shifts found. Seed this month first.</p></div>';
+    container.innerHTML = '<div class="card"><p class="text-sm text-gray-400 text-center py-4">No shifts found. Seed this month first.</p></div>';
     return;
   }
 
@@ -43,16 +43,14 @@ export function renderCalendar(container, shifts, { onDayClick }) {
   // Day-of-week headers
   for (const d of DAYS) {
     const h = document.createElement("div");
-    h.className = "cal-header";
+    h.className = "text-xs font-semibold text-center py-2 text-gray-400 uppercase tracking-wide";
     h.textContent = d;
     calGrid.appendChild(h);
   }
 
-  // First day of month
-  const firstOfMonth = new Date(year, month, 1);
-  const startDay = firstOfMonth.getDay(); // 0=Sun
-
   // Empty leading cells
+  const firstOfMonth = new Date(year, month, 1);
+  const startDay = firstOfMonth.getDay();
   for (let i = 0; i < startDay; i++) {
     const empty = document.createElement("div");
     empty.className = "cal-day cal-day--empty";
@@ -67,11 +65,11 @@ export function renderCalendar(container, shifts, { onDayClick }) {
   for (let day = 1; day <= daysInMonth; day++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const cell = document.createElement("div");
-    cell.className = "cal-day";
+    cell.className = "cal-day border border-gray-200 rounded-lg p-1.5 min-h-[70px] cursor-pointer transition-shadow hover:shadow-md text-sm bg-white";
     if (dateStr === todayStr) cell.classList.add("cal-day--today");
 
     const num = document.createElement("div");
-    num.className = "day-num";
+    num.className = "font-semibold text-sm mb-1 text-gray-700";
     num.textContent = day;
     cell.appendChild(num);
 
@@ -81,7 +79,7 @@ export function renderCalendar(container, shifts, { onDayClick }) {
         if (dayShifts[type]) {
           const s = dayShifts[type];
           const badge = document.createElement("div");
-          badge.className = `shift-badge ${badgeClass(s.signup_count, s.capacity)}`;
+          badge.className = `shift-badge inline-block w-full px-1 py-0.5 rounded text-xs font-medium text-white mt-0.5 ${badgeClass(s.signup_count, s.capacity)}`;
           badge.textContent = `${type === "kakad" ? "K" : "R"}: ${s.signup_count}/${s.capacity}`;
           cell.appendChild(badge);
         }
