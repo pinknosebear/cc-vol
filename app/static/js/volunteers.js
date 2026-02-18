@@ -6,7 +6,7 @@
  * @param {Array} volunteers - from GET /api/volunteers
  * @param {{ onAdd: function }} opts - onAdd(phone, name, isCoordinator)
  */
-export function renderVolunteerList(container, volunteers, { onAdd }) {
+export function renderVolunteerList(container, volunteers, { onAdd, onDelete }) {
   container.innerHTML = "";
 
   const card = document.createElement("div");
@@ -30,6 +30,7 @@ export function renderVolunteerList(container, volunteers, { onAdd }) {
       <th class="text-left py-2 px-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Name</th>
       <th class="text-left py-2 px-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Phone</th>
       <th class="text-left py-2 px-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Role</th>
+      <th class="py-2 px-3"></th>
     </tr>`;
   table.appendChild(thead);
 
@@ -55,7 +56,22 @@ export function renderVolunteerList(container, volunteers, { onAdd }) {
     roleBadge.textContent = vol.is_coordinator ? "Coordinator" : "Volunteer";
     roleTd.appendChild(roleBadge);
 
-    tr.append(nameTd, phoneTd, roleTd);
+    const actionTd = document.createElement("td");
+    actionTd.className = "py-2.5 px-3 text-right";
+    const delBtn = document.createElement("button");
+    delBtn.className = "text-xs text-red-400 hover:text-red-600 transition-colors cursor-pointer";
+    delBtn.textContent = "Delete";
+    delBtn.addEventListener("click", async () => {
+      if (!confirm(`Delete ${vol.name}? This will also drop their active signups.`)) return;
+      try {
+        await onDelete(vol.id);
+      } catch (err) {
+        alert(`Failed to delete: ${err.message}`);
+      }
+    });
+    actionTd.appendChild(delBtn);
+
+    tr.append(nameTd, phoneTd, roleTd, actionTd);
     tbody.appendChild(tr);
   }
   table.appendChild(tbody);

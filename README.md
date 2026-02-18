@@ -21,18 +21,20 @@ filled. Currently managed through a WhatsApp group (noisy) and a Google Sheet
 ### Backend (Python / FastAPI)
 
 ```bash
-cd cc-vol/
 pip install -r requirements.txt
 python -m app.seed          # generate shifts and test volunteers
 uvicorn app.main:app --reload --port 8000
 ```
 
-The API server runs at `http://localhost:8000`.
+The API server and web UI run at `http://localhost:8000`.
+
+- **Coordinator dashboard**: `http://localhost:8000/dashboard`
+- **Volunteer portal**: `http://localhost:8000/volunteer`
 
 ### WhatsApp Bridge (Node.js)
 
 ```bash
-cd cc-vol/wa-bridge/
+cd wa-bridge/
 npm install
 npm start
 ```
@@ -48,7 +50,8 @@ The system runs as two separate processes that communicate over HTTP.
 **Python backend (FastAPI)** -- owns all business logic, signup rules, shift
 data, and coordinator tools. Every decision about whether a signup is valid,
 what gaps exist, or who to remind goes through this process. SQLite is the
-only datastore; no external database server is needed.
+only datastore; no external database server is needed. Also serves the web
+dashboard and volunteer portal as static HTML.
 
 **Node.js bridge (wa-bridge)** -- a thin relay between WhatsApp and the Python
 backend. It uses Baileys (unofficial WhatsApp Web client) to receive messages,
@@ -81,6 +84,11 @@ Volunteer receives WhatsApp reply
 |  Node.js     |  POST /wa/in  |              |
 +--------------+               |  SQLite DB   |
                                +--------------+
+                                      |
+                               +--------------+
+                               |  Web UI      |
+                               |  (Tailwind)  |
+                               +--------------+
 ```
 
 Two-process design. All business logic in Python. Thin WhatsApp relay in Node.js.
@@ -102,6 +110,24 @@ Each day has a Kakad shift and Robe shifts. Capacity varies by day of week.
 | Sun/Mon/Wed/Fri | 16 | 4 | 64 |
 | Tue/Thu/Sat | 12 | 5 | 60 |
 | **Total** | **28** | | **~124 slots/month** |
+
+## Volunteer Registration & Approval
+
+New volunteers register via WhatsApp bot. Their account starts as `pending`
+until a coordinator approves it. This prevents unknown numbers from signing up.
+
+```
+Volunteer: register Priya Sharma
+Bot: Thanks Priya! Your registration is pending coordinator approval.
+
+Coordinator: pending
+Bot: Pending registrations: [list]
+
+Coordinator: approve +1234567890
+Bot: Approved. Priya Sharma can now sign up for shifts.
+```
+
+Volunteer status lifecycle: `pending` → `approved` (or `rejected`).
 
 ## Signup Rules
 
@@ -154,12 +180,22 @@ regardless of how many shifts they already have.
 | Phase 2 | 1 week before | -- | -- | -- | +2 any | 8 |
 | Mid-month | After month starts | -- | -- | -- | unlimited | No cap |
 
+## Notifications
+
+The system sends WhatsApp notifications for time-sensitive events:
+
+- **Late drop**: When a volunteer drops a shift within 24 hours of the shift
+  time, the coordinator is notified so they can find a substitute quickly.
+
+Notifications are queued in the database and sent via the wa-bridge. A
+`notifications` table tracks sent/pending state to prevent duplicates.
+
 ## User Roles
 
 | Role | Count | Capabilities |
 |------|-------|-------------|
-| Volunteer | ~50 | Sign up for shifts, drop shifts, view own schedule |
-| Coordinator | 2-3 | All volunteer actions + view gaps, find substitutes, see who's available |
+| Volunteer | ~50 | Register, sign up for shifts, drop shifts, view own schedule |
+| Coordinator | 2-3 | All volunteer actions + approve/reject registrations, view gaps, find substitutes, see who's available |
 
 Identity is phone number (via WhatsApp). No passwords, no accounts.
 
@@ -169,6 +205,7 @@ Identity is phone number (via WhatsApp). No passwords, no accounts.
 
 | Command | Description |
 |---------|-------------|
+| `register <name>` | Register as a new volunteer (starts pending) |
 | `signup <date> <type>` | Sign up for a shift |
 | `drop <date> <type>` | Drop a shift |
 | `my shifts` | List your upcoming shifts |
@@ -179,9 +216,24 @@ Identity is phone number (via WhatsApp). No passwords, no accounts.
 
 | Command | Description |
 |---------|-------------|
+| `pending` | List volunteers awaiting approval |
+| `approve <phone>` | Approve a volunteer registration |
+| `reject <phone>` | Reject a volunteer registration |
 | `status <date>` | Who's signed up, what's empty |
 | `gaps` | All unfilled upcoming shifts |
 | `find sub <date> <type>` | List available volunteers for a shift |
+
+## Web UI
+
+The Python backend serves a web interface at `/dashboard` and `/volunteer`.
+
+**Coordinator dashboard** (`/dashboard`): Month-at-a-glance grid showing
+fill status for every shift. Click a day to see who's signed up and what's
+empty. Month navigation, volunteer list, and gaps list are shown in side
+panels.
+
+**Volunteer portal** (`/volunteer`): Volunteers can view the shift calendar
+and sign up or drop shifts without using WhatsApp.
 
 ## API Endpoints
 
@@ -203,14 +255,22 @@ Identity is phone number (via WhatsApp). No passwords, no accounts.
 | GET | `/api/coordinator/gaps?month=YYYY-MM` | All unfilled shifts |
 | GET | `/api/coordinator/volunteers/available?date=YYYY-MM-DD` | Who hasn't hit limits |
 
+### WhatsApp
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/wa/incoming` | Receive message from wa-bridge, returns reply text |
+
 ## Data Model
 
 ```sql
-volunteers (id, phone, name, is_coordinator, created_at)
-shifts     (id, date, type, capacity, created_at)
-signups    (id, volunteer_id, shift_id, signed_up_at, dropped_at)
+volunteers    (id, phone, name, is_coordinator, status, created_at)
+shifts        (id, date, type, capacity, created_at)
+signups       (id, volunteer_id, shift_id, signed_up_at, dropped_at)
+notifications (id, volunteer_id, message, sent_at, created_at)
 ```
 
+- `volunteers.status`: 'pending', 'approved', or 'rejected'
 - `shifts.type`: 'kakad' or 'robe'
 - `shifts.capacity`: 1 for Kakad, 3 or 4 for Robe (varies by day of week)
 - `signups.dropped_at`: NULL = active, timestamp = soft-deleted
@@ -220,41 +280,45 @@ signups    (id, volunteer_id, shift_id, signed_up_at, dropped_at)
 ## Tech Stack
 
 - **Backend**: Python, FastAPI, SQLite
+- **Web UI**: HTML, Tailwind CSS, vanilla JS
 - **WhatsApp bridge**: Node.js, @whiskeysockets/baileys
 - **Testing**: pytest
+- **Deployment**: Railway
 
 ## Development
 
 **Run tests:**
 
 ```bash
-pytest cc-vol/tests/ -v
+pytest tests/ -v
 ```
 
 **Seed test data:**
 
 `app/seed.py` generates shifts for a given month and optionally creates test
-volunteers and signups. Run it with `python -m app.seed` from the `cc-vol/`
-directory.
+volunteers and signups. Run it with `python -m app.seed` from the project root.
 
 **Database:**
 
-SQLite stores everything in a single file. No database server to install or
-manage. The schema is created automatically on first run via `app/db.py`.
+SQLite stores everything in a single file (`cc-vol.db`). No database server
+to install or manage. The schema is created automatically on first run via
+`app/db.py`.
 
 ## Project Structure
 
 ```
 cc-vol/
 ├── app/
-│   ├── main.py              # FastAPI app
+│   ├── main.py              # FastAPI app + HTML routes
 │   ├── db.py                # SQLite connection + schema
+│   ├── seed.py              # Shift + volunteer + signup seeding
 │   ├── models/
 │   │   ├── volunteer.py
 │   │   ├── shift.py
-│   │   └── signup.py
+│   │   ├── signup.py
+│   │   └── notification.py
 │   ├── rules/
-│   │   ├── pure.py          # Pure validation functions
+│   │   ├── pure.py          # Pure validation functions (no DB)
 │   │   ├── queries.py       # DB count queries
 │   │   └── validator.py     # Orchestrator
 │   ├── routes/
@@ -267,11 +331,22 @@ cc-vol/
 │   │   ├── parser.py        # Message -> command
 │   │   ├── auth.py          # Phone -> volunteer context
 │   │   └── handlers/
-│   │       ├── volunteer.py
+│   │       ├── registration.py  # register / approve / reject / pending
+│   │       ├── vol_signup.py
+│   │       ├── vol_drop.py
+│   │       ├── vol_query.py
 │   │       └── coordinator.py
-│   └── seed.py              # Shift + volunteer + signup seeding
-├── wa-bridge/                # Node.js WhatsApp service
+│   ├── notifications/
+│   │   └── sender.py        # WhatsApp notification dispatch
+│   └── static/
+│       ├── dashboard.html   # Coordinator dashboard
+│       ├── volunteer.html   # Volunteer portal
+│       ├── chat.html        # Debug/test UI
+│       ├── js/              # Dashboard + portal JS modules
+│       └── css/             # Tailwind output
+├── wa-bridge/               # Node.js WhatsApp service
 ├── tests/
 ├── plan.md
+├── gantt.md
 └── README.md
 ```

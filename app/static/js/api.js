@@ -81,6 +81,10 @@ export function deleteSignup(signupId) {
   return deleteRequest(`${BASE}/api/signups/${signupId}`);
 }
 
+export function deleteVolunteer(volunteerId) {
+  return deleteRequest(`${BASE}/api/volunteers/${volunteerId}`);
+}
+
 export function notifyCoordinatorDroppedShift(phone, shiftDate, shiftType) {
   return postJSON(`${BASE}/api/signups/notify-drop`, {
     volunteer_phone: phone,

@@ -57,6 +57,21 @@ def get_volunteers(request: Request, status: Optional[str] = Query(None)):
     return [{"id": v.id, "phone": v.phone, "name": v.name, "is_coordinator": v.is_coordinator, "status": v.status} for v in vols]
 
 
+@router.delete("/{volunteer_id}", status_code=204)
+def delete_volunteer(volunteer_id: int, request: Request):
+    """Delete a volunteer and their active signups."""
+    db = request.app.state.db
+    row = db.execute("SELECT id FROM volunteers WHERE id = ?", (volunteer_id,)).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Volunteer not found")
+    db.execute(
+        "UPDATE signups SET dropped_at = CURRENT_TIMESTAMP WHERE volunteer_id = ? AND dropped_at IS NULL",
+        (volunteer_id,),
+    )
+    db.execute("DELETE FROM volunteers WHERE id = ?", (volunteer_id,))
+    db.commit()
+
+
 @router.get("/{phone}/shifts", response_model=list[ShiftDetail])
 def get_volunteer_shifts(
     phone: str,

@@ -1,4 +1,4 @@
-import { fetchShifts, fetchDayDetail, fetchGaps, fetchAvailable, fetchVolunteers, createVolunteer, seedMonth } from "./api.js";
+import { fetchShifts, fetchDayDetail, fetchGaps, fetchAvailable, fetchVolunteers, createVolunteer, seedMonth, deleteVolunteer } from "./api.js";
 import { renderMonthPicker } from "./month-picker.js";
 import { renderCalendar } from "./calendar.js";
 import { renderDayDetail } from "./day-detail.js";
@@ -94,7 +94,11 @@ async function loadVolunteers() {
     renderVolunteerList(volunteersEl, vols, {
       onAdd: async (phone, name, isCoord) => {
         await createVolunteer(phone, name, isCoord);
-        loadVolunteers(); // Refresh list
+        loadVolunteers();
+      },
+      onDelete: async (id) => {
+        await deleteVolunteer(id);
+        loadVolunteers();
       },
     });
 
