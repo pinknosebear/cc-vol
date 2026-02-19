@@ -90,9 +90,13 @@ export function renderVolunteerList(container, volunteers, { onAdd, onDelete }) 
           class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400 transition-colors">
       </div>
       <div>
-        <label for="vol-phone" class="block text-xs font-medium text-gray-500 mb-1">Phone</label>
-        <input type="tel" id="vol-phone" placeholder="e.g. 919876543210"
-          class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400 transition-colors">
+        <label class="block text-xs font-medium text-gray-500 mb-1">Phone</label>
+        <div class="flex items-center gap-2">
+          <span class="px-3 py-2 bg-gray-100 text-xs font-semibold rounded-lg border border-gray-200">+1</span>
+          <input type="tel" id="vol-phone" placeholder="e.g. 5101234567"
+            class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400 transition-colors"
+            maxlength="10" pattern="\\d{10}">
+        </div>
       </div>
     </div>
     <div class="flex items-center gap-2 mb-4">
@@ -113,7 +117,9 @@ export function renderVolunteerList(container, volunteers, { onAdd, onDelete }) 
   const msgDiv = container.querySelector("#vol-form-msg");
   addBtn.addEventListener("click", async () => {
     const name = container.querySelector("#vol-name").value.trim();
-    const phone = container.querySelector("#vol-phone").value.trim();
+    const rawPhone = container.querySelector("#vol-phone").value;
+    const digits = (rawPhone || "").replace(/\\D/g, "");
+    const phone = digits.length === 10 ? `+1${digits}` : "";
     const isCoord = container.querySelector("#vol-coord").checked;
     if (!name || !phone) {
       msgDiv.className = "form-message form-message--error";
