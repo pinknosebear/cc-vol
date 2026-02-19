@@ -2,7 +2,7 @@
   --md-sys-color-primary: #4f46e5;
   --md-sys-color-primary-container: #e0e7ff;
   --md-sys-color-on-primary: #ffffff;
-  --md-sys-color-surface: #f5f7fb;
+  --md-sys-color-surface: #f7f8fb;
   --md-sys-color-surface-container: #ffffff;
   --md-sys-color-on-surface: #111827;
   --md-sys-color-outline: #cbd5e1;
@@ -41,16 +41,16 @@ body {
 .card {
   background: var(--md-sys-color-surface-container);
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
+  border-radius: 12px;
   box-shadow: var(--md-elevation-1);
-  padding: 16px;
+  padding: 14px;
 }
 
 /* Calendar grid */
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 .cal-grid--timeline {
@@ -75,18 +75,41 @@ body {
 
 .cal-day--timeline {
   border: 1px solid #f7c0c6;
-  border-radius: 14px;
+  border-radius: 12px;
   background: #ffffff;
-  min-height: 160px;
-  padding: 10px;
+  min-height: 150px;
+  padding: 10px 9px 12px;
   position: relative;
   cursor: pointer;
-  transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+  transition:
+    box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.18s ease,
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.25s ease;
 }
 
 .cal-day--timeline:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: var(--md-elevation-2);
+  background: #fffdfb;
+  border-color: #f08b94;
+}
+
+.cal-day--timeline:active {
+  transform: translateY(0);
+  box-shadow: var(--md-elevation-1);
+}
+
+.cal-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  animation: rows-fade-in 280ms ease;
+}
+
+@keyframes rows-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .cal-day--covered {
@@ -109,12 +132,12 @@ body {
   position: absolute;
   right: -8px;
   top: -8px;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 999px;
   background: var(--md-sys-color-error);
   color: #ffffff;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
@@ -133,11 +156,11 @@ body {
 
 .cal-day-number {
   text-align: center;
-  font-size: 24px;
+  font-size: 21px;
   line-height: 1;
   font-weight: 700;
   color: #0f172a;
-  margin: 6px 0 12px;
+  margin: 8px 0 10px;
 }
 
 .cal-rows {
@@ -151,17 +174,17 @@ body {
   align-items: center;
   justify-content: space-between;
   background: #f8fafc;
-  border-radius: 10px;
+  border-radius: 9px;
   border: 1px solid transparent;
-  padding: 6px 8px;
+  padding: 6px 8px 5px;
 }
 
 .cal-role-row--kakad {
-  border-color: #f6d365;
+  border-color: #f2c46a;
 }
 
 .cal-role-row--robe {
-  border-color: #bfdbfe;
+  border-color: #c8dffe;
 }
 
 .cal-role-left {
@@ -188,26 +211,26 @@ body {
 }
 
 .cal-role-label {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   color: #0f172a;
   line-height: 1.2;
 }
 
 .cal-count-pill {
-  font-size: 13px;
+  font-size: 11px;
   line-height: 1;
   font-weight: 700;
   border-radius: 999px;
-  padding: 3px 8px;
+  padding: 3px 7px;
   border: 1px solid transparent;
   flex: 0 0 auto;
 }
 
 .cal-count-pill--covered {
-  color: var(--md-sys-color-success);
-  border-color: #86efac;
-  background: var(--md-sys-color-success-container);
+  color: #15803d;
+  border-color: #a9f5c0;
+  background: #e9f9f0;
 }
 
 .cal-count-pill--needed {
