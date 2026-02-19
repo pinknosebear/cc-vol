@@ -85,8 +85,36 @@ function monthStr() {
   return `${state.year}-${String(state.month).padStart(2, "0")}`;
 }
 
+function parseIsoDate(dateStr) {
+  return new Date(`${dateStr}T00:00:00`);
+}
+
+function toIsoDate(dateObj) {
+  return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, "0")}-${String(dateObj.getDate()).padStart(2, "0")}`;
+}
+
+function syncMonthFromDate(dateStr) {
+  const d = parseIsoDate(dateStr);
+  state.year = d.getFullYear();
+  state.month = d.getMonth() + 1;
+}
+
+async function moveSelectedDay(dayOffset) {
+  if (!state.selectedDate) return;
+  const next = parseIsoDate(state.selectedDate);
+  next.setDate(next.getDate() + dayOffset);
+  const nextDate = toIsoDate(next);
+  state.selectedDate = nextDate;
+  syncMonthFromDate(nextDate);
+  renderPicker();
+  await loadDayDetail(nextDate);
+}
+
 // --- Data loading ---
 async function loadCalendar() {
+  state.selectedDate = null;
+  renderPicker();
+
   if (!isPhoneComplete(state.phone)) {
     calendarEl.innerHTML =
       '<div class="card"><p>Enter your full phone number to view the calendar.</p></div>';
@@ -125,6 +153,9 @@ async function loadCalendar() {
 
 async function loadDayDetail(date) {
   state.selectedDate = date;
+  syncMonthFromDate(date);
+  renderPicker();
+
   try {
     const shifts = await fetchShifts(monthStr());
     // Filter shifts for this date
@@ -280,10 +311,16 @@ function formatDate(dateStr) {
 
 // --- Month picker wiring ---
 function renderPicker() {
+  const isDayView = activeTab === "calendar" && Boolean(state.selectedDate);
   renderMonthPicker(monthPickerEl, {
     year: state.year,
     month: state.month,
+    mode: isDayView ? "day" : "month",
+    label: isDayView ? formatDate(state.selectedDate) : "",
+    onPrev: () => moveSelectedDay(-1),
+    onNext: () => moveSelectedDay(1),
     onChange: (newYear, newMonth) => {
+      state.selectedDate = null;
       state.year = newYear;
       state.month = newMonth;
       renderPicker();
