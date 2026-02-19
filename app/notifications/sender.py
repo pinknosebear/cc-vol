@@ -48,7 +48,7 @@ def send_message(
     }
 
     try:
-        response = httpx.post(endpoint, json=payload, timeout=10)
+        response = httpx.post(endpoint, json=payload, timeout=30)
         response.raise_for_status()
 
         # Step 4a: Mark as sent
