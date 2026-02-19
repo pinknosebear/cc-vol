@@ -1,10 +1,50 @@
 import os
 import sqlite3
+import re
 from typing import Optional
+from urllib.parse import urlparse, urlunparse
 import httpx
 
 from app.models.notification import NotificationCreate, create_notification, mark_sent, mark_error
 from app.models.volunteer import get_volunteer_by_phone, Volunteer, normalize_phone
+
+
+def _normalized_service_url(raw: Optional[str], default_url: str, default_internal_port: int) -> str:
+    """Normalize env-provided service URL values into a valid base URL.
+
+    Handles common Railway UI input issues:
+    - missing protocol (e.g. wa-bridge.railway.internal)
+    - dangling colon (e.g. http://wa-bridge.railway.internal:)
+    - accidental suffix labels (e.g. "(line 8080)")
+    """
+    value = (raw or "").strip().strip('"').strip("'")
+    if not value:
+        return default_url
+
+    value = re.sub(r"\s*\(line\s*\d+\)\s*$", "", value, flags=re.IGNORECASE)
+
+    if "://" not in value:
+        value = f"http://{value}"
+
+    parsed = urlparse(value)
+    if not parsed.hostname:
+        return default_url
+
+    scheme = parsed.scheme or "http"
+    hostname = parsed.hostname
+
+    try:
+        port = parsed.port
+    except ValueError:
+        port = None
+
+    if port is None and hostname.endswith(".railway.internal"):
+        port = default_internal_port
+
+    netloc = hostname if port is None else f"{hostname}:{port}"
+    path = (parsed.path or "").rstrip("/")
+
+    return urlunparse((scheme, netloc, path, "", "", ""))
 
 
 def send_message(
@@ -39,7 +79,11 @@ def send_message(
     notification = create_notification(db, notif_data)
 
     # Step 3: Call WA Bridge
-    wa_bridge_url = os.getenv("WA_BRIDGE_URL", "http://localhost:3000")
+    wa_bridge_url = _normalized_service_url(
+        os.getenv("WA_BRIDGE_URL"),
+        default_url="http://localhost:3000",
+        default_internal_port=8080,
+    )
     endpoint = f"{wa_bridge_url}/send"
 
     payload = {

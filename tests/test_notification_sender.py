@@ -171,6 +171,63 @@ class TestSendMessage:
         url = call_args[0][0]
         assert url == "http://localhost:3000/send"
 
+    @patch.dict(os.environ, {"WA_BRIDGE_URL": "wa-bridge.railway.internal"})
+    @patch("app.notifications.sender.httpx.post")
+    def test_send_message_adds_scheme_and_internal_port(self, mock_post, db):
+        """Host-only internal URLs should normalize to http://host:8080."""
+        vol_data = VolunteerCreate(phone="+1234567890", name="Test Volunteer")
+        volunteer = create_volunteer(db, vol_data)
+        mock_post.return_value = MagicMock(status_code=200)
+
+        send_message(
+            db,
+            volunteer_id=volunteer.id,
+            message="Test message",
+            notification_type="alert",
+        )
+
+        call_args = mock_post.call_args
+        url = call_args[0][0]
+        assert url == "http://wa-bridge.railway.internal:8080/send"
+
+    @patch.dict(os.environ, {"WA_BRIDGE_URL": "wa-bridge.railway.internal (line 8080)"})
+    @patch("app.notifications.sender.httpx.post")
+    def test_send_message_strips_line_suffix_label(self, mock_post, db):
+        """Railway host picker suffix should not break send URL."""
+        vol_data = VolunteerCreate(phone="+1234567890", name="Test Volunteer")
+        volunteer = create_volunteer(db, vol_data)
+        mock_post.return_value = MagicMock(status_code=200)
+
+        send_message(
+            db,
+            volunteer_id=volunteer.id,
+            message="Test message",
+            notification_type="alert",
+        )
+
+        call_args = mock_post.call_args
+        url = call_args[0][0]
+        assert url == "http://wa-bridge.railway.internal:8080/send"
+
+    @patch.dict(os.environ, {"WA_BRIDGE_URL": "http://wa-bridge.railway.internal:"})
+    @patch("app.notifications.sender.httpx.post")
+    def test_send_message_handles_dangling_colon(self, mock_post, db):
+        """Internal URLs with trailing colon should still resolve to port 8080."""
+        vol_data = VolunteerCreate(phone="+1234567890", name="Test Volunteer")
+        volunteer = create_volunteer(db, vol_data)
+        mock_post.return_value = MagicMock(status_code=200)
+
+        send_message(
+            db,
+            volunteer_id=volunteer.id,
+            message="Test message",
+            notification_type="alert",
+        )
+
+        call_args = mock_post.call_args
+        url = call_args[0][0]
+        assert url == "http://wa-bridge.railway.internal:8080/send"
+
     @patch("app.notifications.sender.httpx.post")
     def test_send_message_notification_persisted(self, mock_post, db):
         """Test that notification record is persisted even on failure."""

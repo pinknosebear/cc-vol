@@ -8,7 +8,58 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const FASTAPI_URL = process.env.FASTAPI_URL || "http://localhost:8000";
+function normalizeServiceUrl(raw, fallback, defaultInternalPort) {
+  let value = (raw || "").trim().replace(/^["']|["']$/g, "");
+  if (!value) return fallback;
+
+  // Railway UI can inject labels like "(line 8080)" when selecting hosts.
+  value = value.replace(/\s*\(line\s*\d+\)\s*$/i, "");
+
+  if (!value.includes("://")) {
+    value = `http://${value}`;
+  }
+
+  try {
+    const parsed = new URL(value);
+    if (!parsed.port && parsed.hostname.endsWith(".railway.internal")) {
+      parsed.port = String(defaultInternalPort);
+    }
+    return parsed.toString().replace(/\/$/, "");
+  } catch (_err) {
+    return fallback;
+  }
+}
+
+function normalizePhoneToJid(phone) {
+  if (typeof phone !== "string") return "";
+  const raw = phone.trim();
+  if (!raw) return "";
+  if (raw.includes("@")) return raw;
+
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  return `${digits}@s.whatsapp.net`;
+}
+
+async function withTimeout(promise, timeoutMs) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`send timed out after ${timeoutMs}ms`)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+const FASTAPI_URL = normalizeServiceUrl(
+  process.env.FASTAPI_URL,
+  "http://localhost:8000",
+  8080,
+);
 const PORT = parseInt(process.env.PORT, 10) || 3000;
 const OUTBOUND_ONLY = (process.env.WA_OUTBOUND_ONLY ?? "true").toLowerCase() === "true";
 
@@ -131,14 +182,18 @@ app.post("/send", async (req, res) => {
     return res.status(503).json({ error: "WhatsApp not connected" });
   }
 
-  const jid = phone.includes("@") ? phone : `${phone}@s.whatsapp.net`;
+  const jid = normalizePhoneToJid(phone);
+  if (!jid) {
+    return res.status(400).json({ error: "Invalid phone format" });
+  }
 
   try {
-    await sock.sendMessage(jid, { text: message });
+    await withTimeout(sock.sendMessage(jid, { text: message }), 20000);
     res.json({ ok: true });
   } catch (err) {
-    console.error("Send failed:", err.message);
-    res.status(500).json({ error: "Failed to send message" });
+    const message = err?.message || "Unknown error";
+    console.error("Send failed:", message);
+    res.status(502).json({ error: `Failed to send message: ${message}` });
   }
 });
 
