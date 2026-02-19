@@ -8,11 +8,29 @@ import { renderMonthPicker } from "./month-picker.js";
 import { renderCalendar } from "./calendar.js";
 import { renderShiftPanel } from "./vol-shift-panel.js";
 
+const defaultCountryCode = (
+  document.querySelector('meta[name="default-country-code"]')?.content || "1"
+).replace(/\D/g, "") || "1";
+const defaultPhonePrefix = `+${defaultCountryCode}`;
+
+function digitsOnly(value) {
+  return (value || "").replace(/\D/g, "");
+}
+
+function isPhoneComplete(value) {
+  const trimmed = (value || "").trim();
+  const digits = digitsOnly(trimmed);
+  if (!trimmed) return false;
+  if (trimmed.startsWith("+")) return digits.length >= 11;
+  return digits.length >= 10;
+}
+
 // State
+const storedPhone = (sessionStorage.getItem("volunteer_phone") || "").trim();
 const state = {
   year: new Date().getFullYear(),
   month: new Date().getMonth() + 1,
-  phone: sessionStorage.getItem("volunteer_phone") || "",
+  phone: storedPhone || defaultPhonePrefix,
   selectedDate: null,
   myShiftsLoaded: false,
   signedUpShiftIds: new Set(),
@@ -31,7 +49,11 @@ let activeTab = "calendar";
 // --- Phone input wiring ---
 phoneInput.value = state.phone;
 phoneInput.addEventListener("change", (e) => {
-  state.phone = e.target.value;
+  state.phone = e.target.value.trim();
+  if (!state.phone) {
+    state.phone = defaultPhonePrefix;
+  }
+  e.target.value = state.phone;
   sessionStorage.setItem("volunteer_phone", state.phone);
   if (activeTab === "calendar") loadCalendar();
   if (activeTab === "my-shifts") loadMyShifts();
@@ -65,9 +87,9 @@ function monthStr() {
 
 // --- Data loading ---
 async function loadCalendar() {
-  if (!state.phone) {
+  if (!isPhoneComplete(state.phone)) {
     calendarEl.innerHTML =
-      '<div class="card"><p>Enter your phone number to view the calendar.</p></div>';
+      '<div class="card"><p>Enter your full phone number to view the calendar.</p></div>';
     return;
   }
 
@@ -142,9 +164,9 @@ async function loadDayDetail(date) {
 }
 
 async function loadMyShifts() {
-  if (!state.phone) {
+  if (!isPhoneComplete(state.phone)) {
     myShiftsEl.innerHTML =
-      '<div class="card"><p>Enter your phone number to view your shifts.</p></div>';
+      '<div class="card"><p>Enter your full phone number to view your shifts.</p></div>';
     return;
   }
 
