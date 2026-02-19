@@ -62,12 +62,72 @@ const FASTAPI_URL = normalizeServiceUrl(
 );
 const PORT = parseInt(process.env.PORT, 10) || 3000;
 const OUTBOUND_ONLY = (process.env.WA_OUTBOUND_ONLY ?? "true").toLowerCase() === "true";
+const SEND_TIMEOUT_MS = parseInt(process.env.WA_SEND_TIMEOUT_MS || "20000", 10);
+const QUEUE_MAX_SIZE = parseInt(process.env.WA_QUEUE_MAX_SIZE || "500", 10);
+const QUEUE_MAX_ATTEMPTS = parseInt(process.env.WA_QUEUE_MAX_ATTEMPTS || "12", 10);
+const QUEUE_RETRY_DELAY_MS = parseInt(process.env.WA_QUEUE_RETRY_DELAY_MS || "10000", 10);
+const QUEUE_FLUSH_INTERVAL_MS = parseInt(process.env.WA_QUEUE_FLUSH_INTERVAL_MS || "5000", 10);
 
 const logger = pino({ level: "warn" });
 
 let sock = null;
 let connectionStatus = "disconnected";
 const botSentIds = new Set(); // track messages sent by the bot to avoid loops
+const outboundQueue = [];
+let flushInProgress = false;
+
+function enqueueMessage(jid, message, reason) {
+  if (outboundQueue.length >= QUEUE_MAX_SIZE) {
+    return { ok: false, reason: "queue_full" };
+  }
+  outboundQueue.push({
+    jid,
+    message,
+    attempts: 0,
+    nextAttemptAt: Date.now(),
+    lastError: reason || null,
+  });
+  return { ok: true };
+}
+
+async function sendViaSocket(jid, message) {
+  if (connectionStatus !== "connected" || !sock) {
+    throw new Error("WhatsApp not connected");
+  }
+  await withTimeout(sock.sendMessage(jid, { text: message }), SEND_TIMEOUT_MS);
+}
+
+async function flushQueue() {
+  if (flushInProgress) return;
+  if (connectionStatus !== "connected" || !sock) return;
+  if (outboundQueue.length === 0) return;
+
+  flushInProgress = true;
+  try {
+    const now = Date.now();
+    for (let i = 0; i < outboundQueue.length; i += 1) {
+      const item = outboundQueue[i];
+      if (item.nextAttemptAt > now) continue;
+
+      try {
+        await sendViaSocket(item.jid, item.message);
+        outboundQueue.splice(i, 1);
+        i -= 1;
+      } catch (err) {
+        item.attempts += 1;
+        item.lastError = err?.message || "Unknown error";
+        item.nextAttemptAt = Date.now() + QUEUE_RETRY_DELAY_MS;
+        if (item.attempts >= QUEUE_MAX_ATTEMPTS) {
+          console.error(`Dropping queued message after ${item.attempts} attempts: ${item.lastError}`);
+          outboundQueue.splice(i, 1);
+          i -= 1;
+        }
+      }
+    }
+  } finally {
+    flushInProgress = false;
+  }
+}
 
 // ── WhatsApp connection ────────────────────────────────────────────
 
@@ -100,6 +160,9 @@ async function startWhatsApp() {
     if (connection === "open") {
       connectionStatus = "connected";
       console.log("WhatsApp connected");
+      flushQueue().catch((err) => {
+        console.error("Queue flush failed:", err?.message || err);
+      });
     }
 
     if (connection === "close") {
@@ -168,7 +231,10 @@ const app = express();
 app.use(express.json());
 
 app.get("/health", (_req, res) => {
-  res.json({ status: connectionStatus });
+  res.json({
+    status: connectionStatus,
+    queued: outboundQueue.length,
+  });
 });
 
 app.post("/send", async (req, res) => {
@@ -178,22 +244,31 @@ app.post("/send", async (req, res) => {
     return res.status(400).json({ error: "phone and message are required" });
   }
 
-  if (connectionStatus !== "connected" || !sock) {
-    return res.status(503).json({ error: "WhatsApp not connected" });
-  }
-
   const jid = normalizePhoneToJid(phone);
   if (!jid) {
     return res.status(400).json({ error: "Invalid phone format" });
   }
 
+  if (connectionStatus !== "connected" || !sock) {
+    const queued = enqueueMessage(jid, message, "WhatsApp not connected");
+    if (!queued.ok) {
+      return res.status(503).json({ error: "WhatsApp not connected and queue is full" });
+    }
+    return res.status(202).json({ ok: true, queued: true });
+  }
+
   try {
-    await withTimeout(sock.sendMessage(jid, { text: message }), 20000);
-    res.json({ ok: true });
+    await sendViaSocket(jid, message);
+    res.json({ ok: true, queued: false });
   } catch (err) {
-    const message = err?.message || "Unknown error";
-    console.error("Send failed:", message);
-    res.status(502).json({ error: `Failed to send message: ${message}` });
+    const errMsg = err?.message || "Unknown error";
+    const queued = enqueueMessage(jid, message, errMsg);
+    if (!queued.ok) {
+      console.error("Send failed and queue full:", errMsg);
+      return res.status(502).json({ error: `Failed to send message and queue is full: ${errMsg}` });
+    }
+    console.error("Send failed, queued for retry:", errMsg);
+    res.status(202).json({ ok: true, queued: true, error: errMsg });
   }
 });
 
@@ -202,6 +277,12 @@ app.post("/send", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`wa-bridge HTTP listening on port ${PORT}`);
 });
+
+setInterval(() => {
+  flushQueue().catch((err) => {
+    console.error("Periodic queue flush failed:", err?.message || err);
+  });
+}, QUEUE_FLUSH_INTERVAL_MS);
 
 startWhatsApp().catch((err) => {
   console.error("Fatal:", err);
